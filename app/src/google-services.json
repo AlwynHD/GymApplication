@@ -1,0 +1,39 @@
+{
+  "project_info": {
+    "project_number": "640275406108",
+    "project_id": "consultationapp-aca18",
+    "storage_bucket": "consultationapp-aca18.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:640275406108:android:86ce5071f71c4515eb6ed9",
+        "android_client_info": {
+          "package_name": "com.example.gymconsultationapp"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "640275406108-lnagaoptgs8g7gf1bpq6ufpi6sgsjsk5.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDZJDV7IlL4DRECi3Yg7qOlYfRRDloD-Fc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "640275406108-lnagaoptgs8g7gf1bpq6ufpi6sgsjsk5.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
