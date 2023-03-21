@@ -36,6 +36,7 @@ fun TrainerMenu(navController: NavController) {
 
     ) {
 
+
 //        Text(
 //            modifier = Modifier.clickable {
 //                navController.navigate(route = Screen.LoginScreen.route)

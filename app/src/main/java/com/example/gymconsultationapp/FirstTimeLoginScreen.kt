@@ -1,6 +1,9 @@
 package com.example.gymconsultationapp
 
 import android.content.ContentValues
+import android.content.Intent
+import android.net.Uri
+import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
 import androidx.compose.animation.core.Animatable
@@ -33,12 +36,17 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.app.ActivityCompat.startActivityForResult
 import androidx.navigation.NavController
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.launch
+import java.io.File
+
+private const val REQUEST_IMAGE_GALLERY = 1
 
 //maybe floating text to say we need more information first
 //Welcome
@@ -227,11 +235,11 @@ fun FirstTrainer(navController: NavController) {
                         "What is Your Age" -> labelValue = "What is Your Price"
                         "What is Your Price" -> {
                             labelValue = "Tell us a little about Yourself"
-                            btnText = "Complete"
+
                         }
                         "Tell us a little about Yourself" -> {
                             dbWrite("UserInfo", "onCompleted", true)
-                            navController.navigate(route = Screen.TrainerMenu.route)
+                            navController.navigate(route = Screen.UploadImage.route)
                         }
                     }
 
@@ -303,10 +311,10 @@ fun FirstTrainee(navController: NavController) {
                         "What are Your Goals" -> labelValue = "What is Your Height"
                         "What is Your Height" -> {
                             labelValue = "What is Your Weight"
-                            btnText = "Complete"}
+                            }
                         "What is Your Weight" -> {
                             dbWrite("UserInfo", "onCompleted", true)
-                            navController.navigate(route = Screen.TrainerMenu.route)
+                            navController.navigate(route = Screen.UploadImage.route)
                         }
                     }
 
@@ -317,6 +325,7 @@ fun FirstTrainee(navController: NavController) {
                         "height" -> pathValue = "weight"
 
                     }
+
 
 
                 },
@@ -487,3 +496,4 @@ fun ProfessionalLabel(
         modifier = modifier.padding(bottom = 4.dp)
     )
 }
+
