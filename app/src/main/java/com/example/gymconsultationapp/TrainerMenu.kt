@@ -1,9 +1,11 @@
 package com.example.gymconsultationapp
+
+import android.content.ContentValues.TAG
+import android.util.Log
 import androidx.compose.ui.res.painterResource
 import androidx.annotation.DrawableRes
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
-import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
@@ -21,8 +23,12 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.delay
 
 val ButtonBlue = Color(0xff505cf3)
 val AquaBlue = Color(0xff9aa5c4)
@@ -35,8 +41,7 @@ fun TrainerMenu(navController: NavController) {
         contentAlignment = Alignment.Center
 
     ) {
-
-
+        FadingStrings(listOf("Hello", "My", "Name", "Is", "Alwyn"))
 //        Text(
 //            modifier = Modifier.clickable {
 //                navController.navigate(route = Screen.LoginScreen.route)
@@ -46,18 +51,17 @@ fun TrainerMenu(navController: NavController) {
 //            fontSize = MaterialTheme.typography.h3.fontSize,
 //            fontWeight = FontWeight.Bold
 //        )
-        BottomMenu(items = listOf(
-            BottomMenuContent("Home", R.drawable.ic_home),
-            BottomMenuContent("Clients", R.drawable.ic_clients),
-            BottomMenuContent("Profile", R.drawable.ic_profile),
-        ), modifier = Modifier.align(Alignment.BottomCenter))
+        BottomMenu(
+            items = listOf(
+                BottomMenuContent("Home", R.drawable.ic_home),
+                BottomMenuContent("Clients", R.drawable.ic_clients),
+                BottomMenuContent("Profile", R.drawable.ic_profile),
+            ), modifier = Modifier.align(Alignment.BottomCenter)
+        )
     }
 
 
-
-
 }
-
 
 
 @Composable
@@ -104,40 +108,39 @@ fun BottomMenuItem(
     onItemClick: () -> Unit
 ) {
 
-        Box(
+    Box(
+        modifier = Modifier
+            .clip(CircleShape)
+            .background(if (isSelected) activeHighlightColor else Color.Transparent)
+            .clickable { onItemClick() }
+
+    ) {
+
+        Row(
             modifier = Modifier
-                .clip(CircleShape)
-                .background(if (isSelected) activeHighlightColor else Color.Transparent)
-                .clickable { onItemClick() }
-
-        ){
-
-            Row(
-                modifier= Modifier
-                    .padding(12.dp)
-                    .height(IntrinsicSize.Min),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                .padding(12.dp)
+                .height(IntrinsicSize.Min),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(4.dp),
 
             ) {
-                Icon(
-                    painter = painterResource(id = item.iconId),
-                    contentDescription = item.title,
-                    tint = if (isSelected) activeTextColor else inactiveTextColor,
-                    modifier = Modifier.size(20.dp)
+            Icon(
+                painter = painterResource(id = item.iconId),
+                contentDescription = item.title,
+                tint = if (isSelected) activeTextColor else inactiveTextColor,
+                modifier = Modifier.size(20.dp)
+
+            )
+            androidx.compose.animation.AnimatedVisibility(visible = isSelected) {
+                Text(
+                    text = item.title,
+                    color = if (isSelected) activeTextColor else inactiveTextColor
 
                 )
-                androidx.compose.animation.AnimatedVisibility(visible = isSelected) {
-                    Text(
-                        text = item.title,
-                        color = if(isSelected) activeTextColor else inactiveTextColor
-
-                    )
             }
 
 
-            }
-
+        }
 
 
     }
@@ -147,3 +150,73 @@ data class BottomMenuContent(
     val title: String,
     @DrawableRes val iconId: Int
 )
+
+
+@Composable
+fun FadingStrings(strings: List<String>) {
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.Center
+    ) {
+        var currentIndex by remember { mutableStateOf(0) }
+        var visible by remember { mutableStateOf(false) }
+        var isCompleted by remember { mutableStateOf(true) }
+
+
+        LaunchedEffect(Unit) {
+            while (isCompleted) {
+                Log.d(TAG, currentIndex.toString() + strings.size.toString())
+                // Show the current text
+                visible = true
+                delay(1500L)
+
+                // Hide the current text and move to the next one
+                visible = false
+
+                delay(1000L)
+                if (currentIndex == strings.size) {
+                    isCompleted = false
+
+                }
+
+                currentIndex = (currentIndex + 1) % strings.size
+            }
+        }
+
+        AnimatedVisibility(
+            visible = visible,
+            enter = fadeIn(
+                animationSpec = tween(
+                    durationMillis = 750,
+                    easing = LinearOutSlowInEasing
+                )
+            ),
+            exit = fadeOut(
+                animationSpec = tween(
+                    durationMillis = 750,
+                    easing = LinearOutSlowInEasing
+                )
+            )
+        ) {
+            Text(
+                text = strings[currentIndex],
+                fontSize = 48.sp,
+                fontWeight = FontWeight.Bold,
+                modifier = Modifier
+            )
+        }
+    }
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
