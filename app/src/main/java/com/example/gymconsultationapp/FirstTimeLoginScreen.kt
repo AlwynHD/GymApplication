@@ -2,14 +2,20 @@ package com.example.gymconsultationapp
 
 import android.content.ContentValues
 import android.content.Intent
+import android.graphics.Bitmap
+import android.graphics.ImageDecoder
 import android.net.Uri
+import android.os.Build
 import android.provider.MediaStore
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -28,7 +34,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
@@ -42,6 +50,7 @@ import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
+import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.launch
 import java.io.File
@@ -52,13 +61,6 @@ private const val REQUEST_IMAGE_GALLERY = 1
 //Welcome
 //Before You Start
 //We need a few bits of information first
-
-
-//Only one option at a time
-//make one false the other true whatever
-//make next button
-//make function so you can easily record in db
-//do this for trainer an trainee
 
 
 @Composable
@@ -135,7 +137,7 @@ fun FirstTimeLoginScreen(navController: NavController) {
                             "age" to null,
                             "calories" to null,
                             "trainerId" to null,
-                            "trainerFound" to null,
+                            "trainerFound" to false,
                             "height" to null,
                             "weight" to null,
                             "goals" to null
@@ -202,7 +204,6 @@ fun FirstTrainer(navController: NavController) {
     var btnText by remember { mutableStateOf("Next") }
 
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
 
 
 
@@ -495,5 +496,119 @@ fun ProfessionalLabel(
         color = color,
         modifier = modifier.padding(bottom = 4.dp)
     )
+}
+
+
+@Composable
+fun UploadImage(navController: NavController) {
+    val auth = Firebase.auth
+    val db = Firebase.firestore
+
+    var imageUri by remember {
+        mutableStateOf<Uri?>(null)
+    }
+    val context = LocalContext.current
+    val bitmap = remember {
+        mutableStateOf<Bitmap?>(null)
+    }
+
+    val launcher = rememberLauncherForActivityResult(
+        contract =
+        ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        imageUri = uri
+    }
+
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        ProfessionalLabel(label = "Choose a Profile Picture")
+
+        Spacer(modifier = Modifier.height(12.dp))
+        Button(onClick = {
+            launcher.launch("image/*")
+        }) {
+            Text(text = "Pick image")
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        imageUri?.let {
+            if (Build.VERSION.SDK_INT < 28) {
+                bitmap.value = MediaStore.Images
+                    .Media.getBitmap(context.contentResolver, it)
+
+            } else {
+                val source = ImageDecoder
+                    .createSource(context.contentResolver, it)
+                bitmap.value = ImageDecoder.decodeBitmap(source)
+            }
+
+            bitmap.value?.let { btm ->
+                Image(
+                    bitmap = btm.asImageBitmap(),
+                    contentDescription = null,
+                    modifier = Modifier.size(400.dp)
+
+                )
+            }
+        }
+        Spacer(modifier = Modifier.height(12.dp))
+
+        if (imageUri != null) {
+            Button(onClick = {
+                val storage = FirebaseStorage.getInstance()
+
+
+                val fileRef = storage.reference.child("pfp/${auth.currentUser!!.uid}")
+                val uploadTask = fileRef.putFile(imageUri!!)
+
+                uploadTask.addOnSuccessListener {
+                    Log.e("Firebase", "download passed")
+
+                }.addOnFailureListener {
+                    Log.e("Firebase", "Image Upload fail")
+                }
+
+
+
+                val docref = db.collection("UserInfo").document(auth.currentUser!!.uid)
+                docref.get()
+                    .addOnSuccessListener { document ->
+                        if (document != null) {
+
+                            val userType = document.get("userType")
+
+                            if(userType == "Trainers") {
+                                navController.navigate(route = Screen.TrainerMenu.route)
+                            }
+                            else{
+                                navController.navigate(route = Screen.ChooseTrainer.route)
+                            }
+                            Log.d(ContentValues.TAG, "Has user logged in before: $userType")
+                        } else {
+                            Log.d(ContentValues.TAG, "No such document")
+                        }
+                    }
+
+                    .addOnFailureListener { exception ->
+                        Log.d(ContentValues.TAG, "get failed with ", exception)
+                    }
+
+
+
+            })
+            {
+                Text(text = "Complete")
+            }
+
+        }
+
+
+    }
 }
 

@@ -4,21 +4,22 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
+import com.example.gymconsultationapp.ui.theme.ChooseTrainer
 import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun SetupNavGraph(
     navController: NavHostController
 ){
-    NavHost(navController = navController, startDestination = Screen.TrainerMenu.route) {
+    NavHost(navController = navController, startDestination = Screen.ChooseTrainer.route) {
         composable(route = Screen.LoginScreen.route) {
             LoginScreen(navController =  navController)
         }
         composable(route = Screen.TrainerMenu.route) {
             TrainerMenu(navController = navController)
         }
-        composable(route = Screen.TraineeMenu.route) {
-            //Trainee Route
+        composable(route = Screen.ChooseTrainer.route) {
+            ChooseTrainer(navController = navController)
         }
         composable(route = Screen.SignUpScreen.route) {
             SignUpScreen(navController = navController)

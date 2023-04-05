@@ -41,7 +41,7 @@ fun TrainerMenu(navController: NavController) {
         contentAlignment = Alignment.Center
 
     ) {
-        FadingStrings(listOf("Hello", "My", "Name", "Is", "Alwyn"))
+
 //        Text(
 //            modifier = Modifier.clickable {
 //                navController.navigate(route = Screen.LoginScreen.route)
@@ -152,61 +152,7 @@ data class BottomMenuContent(
 )
 
 
-@Composable
-fun FadingStrings(strings: List<String>) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-    ) {
-        var currentIndex by remember { mutableStateOf(0) }
-        var visible by remember { mutableStateOf(false) }
-        var isCompleted by remember { mutableStateOf(true) }
 
-
-        LaunchedEffect(Unit) {
-            while (isCompleted) {
-                Log.d(TAG, currentIndex.toString() + strings.size.toString())
-                // Show the current text
-                visible = true
-                delay(1500L)
-
-                // Hide the current text and move to the next one
-                visible = false
-
-                delay(1000L)
-                if (currentIndex == strings.size) {
-                    isCompleted = false
-
-                }
-
-                currentIndex = (currentIndex + 1) % strings.size
-            }
-        }
-
-        AnimatedVisibility(
-            visible = visible,
-            enter = fadeIn(
-                animationSpec = tween(
-                    durationMillis = 750,
-                    easing = LinearOutSlowInEasing
-                )
-            ),
-            exit = fadeOut(
-                animationSpec = tween(
-                    durationMillis = 750,
-                    easing = LinearOutSlowInEasing
-                )
-            )
-        ) {
-            Text(
-                text = strings[currentIndex],
-                fontSize = 48.sp,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-            )
-        }
-    }
-}
 
 
 

@@ -326,7 +326,7 @@ Box(
 
 
                                 Toast.makeText(context, "Account Successfully Created.Log in!", Toast.LENGTH_SHORT).show()
-                                navController.navigate(route = Screen.TrainerMenu.route)
+                                navController.navigate(route = Screen.FirstTimeLoginScreen.route)
                             }else {
                                 Log.d("TAG", task.exception.toString())
                                 Toast.makeText(context, task.exception.toString(), Toast.LENGTH_SHORT).show()
