@@ -4,8 +4,6 @@ import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
-import com.example.gymconsultationapp.ui.theme.ChooseTrainer
-import com.google.firebase.auth.FirebaseAuth
 
 @Composable
 fun SetupNavGraph(

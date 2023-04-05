@@ -1,4 +1,4 @@
-package com.example.gymconsultationapp.ui.theme
+package com.example.gymconsultationapp
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
