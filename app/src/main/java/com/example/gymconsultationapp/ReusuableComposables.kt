@@ -90,7 +90,7 @@ fun FadingStrings(strings: List<String>) {
                 visible = false
 
                 delay(1000L)
-                if (currentIndex == strings.size) {
+                if (currentIndex == strings.size - 1) {
                     isCompleted = false
 
                 }
