@@ -1,39 +1,32 @@
 package com.example.gymconsultationapp
 
 import android.content.ContentValues.TAG
-import android.nfc.Tag
+import android.graphics.Color
 import android.util.Log
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.*
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Text
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import com.example.gymconsultationapp.FadingStrings
-import com.google.firebase.auth.ktx.auth
-import com.google.firebase.firestore.ktx.firestore
-import com.google.firebase.ktx.Firebase
 import androidx.compose.runtime.Composable
-import com.google.firebase.firestore.ListenerRegistration
-
-
-
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.unit.dp
+import coil.annotation.ExperimentalCoilApi
+import coil.compose.rememberImagePainter
 import com.google.firebase.firestore.FirebaseFirestore
-import kotlinx.coroutines.flow.onEach
+import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.tasks.await
+import androidx.compose.ui.graphics.Color as ComposeColor
+import kotlin.random.Random
 
-//First try get android phone to use
-//make a lazy column to scroll through trainers
-//when trainer is clicked
-//alert dialog box open and shows trainer info
-//either cancel or proceed
-//if proceed carry on to trainee features
-//then make plans for what trainer and trainee can do
-//LIGHTWORK BABY
+
 
 
 @Composable
@@ -41,49 +34,147 @@ fun ChooseTrainer(navController: NavController) {
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        FadingStrings(listOf("Thank You For Waiting", "One Last Step", "Choose Your Perfect...", "Trainer!!!"))
+        //FadingStrings(listOf("Thank You For Waiting", "One Last Step", "Choose Your Perfect...", "Trainer!!!"))
 
 
     }
-    FirestoreReadCollection(collection = "Trainers") { document ->
-        "Name: ${document["name"]}, Age: ${document["age"]}"
-    }
+    TrainerList()
+
 }
 
 
 
+
+data class Trainer(val name: String, val biography: String, val imageUrl: String)
+
+@OptIn(ExperimentalCoilApi::class)
 @Composable
-fun FirestoreReadCollection(
-    collection: String,
-    documentMapper: (Map<String, Any>) -> String
-) {
-    var documents by remember { mutableStateOf(emptyList<Map<String, Any>>()) }
-    val query = remember(collection) { FirebaseFirestore.getInstance().collection(collection) }
+fun ScrollableCardList(trainers: List<Trainer>) {
 
-    DisposableEffect(Unit) {
-        val listener = query.addSnapshotListener { snapshot, error ->
-            if (error != null) {
-                // handle error
+    var selectedTrainer by remember { mutableStateOf<Trainer?>(null) }
 
-                return@addSnapshotListener
+    LazyColumn(
+        modifier = Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+    ) {
+        items(trainers) { trainer ->
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 16.dp)
+                    .clickable {
+                               selectedTrainer = trainer
+                    },
+                backgroundColor = ComposeColor.White,
+                elevation = 4.dp,
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, ComposeColor.LightGray)
+            ) {
+                Row(
+                    verticalAlignment = Alignment.CenterVertically,
+                    modifier = Modifier.padding(16.dp)
+                ) {
+                    Image(
+                        painter = rememberImagePainter(
+                            data = trainer.imageUrl,
+                            builder = {
+                                crossfade(true)
+                            }
+                        ),
+                        contentDescription = "Trainer image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Column {
+                        Text(
+                            text = trainer.name,
+                            style = MaterialTheme.typography.h6
+                        )
+                        Text(
+                            text = trainer.biography,
+                            style = MaterialTheme.typography.caption,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
             }
-
-            val updatedDocuments = snapshot?.documents?.mapNotNull { it.data } ?: emptyList()
-            documents = updatedDocuments.toMutableList()
-        }
-
-        onDispose {
-
-
-            listener.remove()
         }
     }
 
-    LazyColumn(modifier = Modifier.fillMaxSize()) {
-        items(documents) { document ->
-            Text(text = documentMapper(document))
-            Log.d(TAG, documentMapper(document).toString())
+    selectedTrainer?.let { trainer ->
+        AlertDialog(
+            onDismissRequest = { selectedTrainer = null },
+            title = { Text(text = trainer.name) },
+            text = {
+                Row(
+                    modifier = Modifier.padding(bottom = 16.dp)
+                ) {
+                    Image(
+                        painter = rememberImagePainter(
+                            data = trainer.imageUrl,
+                            builder = {
+                                crossfade(true)
+                            }
+                        ),
+                        contentDescription = "Trainer image",
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(8.dp))
+                    )
+                    Spacer(modifier = Modifier.width(16.dp))
+                    Text(
+                        text = trainer.biography,
+                        style = MaterialTheme.typography.caption
+                    )
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { selectedTrainer = null }) {
+                    Text(text = "Close")
+                }
+            },
+            modifier = Modifier
+                .padding(16.dp)
+                .fillMaxWidth()
+                .background(color = ComposeColor.White, shape = RoundedCornerShape(16.dp))
+                .border(width = 1.dp, color = ComposeColor.LightGray, shape = RoundedCornerShape(16.dp))
+                .clip(RoundedCornerShape(16.dp))
+        )
+    }
+
+
+
+
+
+
+}
+
+
+@Composable
+fun TrainerList() {
+    val db = FirebaseFirestore.getInstance()
+    val storage = FirebaseStorage.getInstance()
+    var trainers by remember { mutableStateOf(emptyList<Trainer>()) }
+
+    LaunchedEffect(Unit) {
+        val snapshot = db.collection("Trainers").get().await()
+        val newTrainers = snapshot.documents.map { document ->
+            val name = document.getString("name") ?: ""
+            val biography = document.getString("biography") ?: ""
+            val pfpRef = storage.reference.child("pfp/${document.id}")
+            Log.d(TAG, pfpRef.toString())
+            val imageUrl = pfpRef.downloadUrl.await().toString()
+            Trainer(name, biography, imageUrl)
         }
+        trainers = newTrainers
+    }
+
+    Surface(color = ComposeColor.White) {
+        ScrollableCardList(trainers)
     }
 }
 
