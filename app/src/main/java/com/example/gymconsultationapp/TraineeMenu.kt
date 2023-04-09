@@ -26,6 +26,7 @@ import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import androidx.compose.ui.graphics.Color as ComposeColor
 import kotlin.random.Random
@@ -38,18 +39,29 @@ fun ChooseTrainer(navController: NavController) {
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
-        //FadingStrings(listOf("Thank You For Waiting", "One Last Step", "Choose Your Perfect...", "Trainer!!!"))
+        FadingStrings(listOf("Thank You For Waiting", "One Last Step", "Choose Your Perfect...", "Trainer!!!"))
 
 
     }
-    TrainerList()
+    var timeElapsed by remember { mutableStateOf(false) }
 
-}
+    LaunchedEffect(true) {
+        delay(10000) // Wait for 5 seconds
+        timeElapsed = true
+    }
+
+    if (timeElapsed) {
+        TrainerList()}
+    }
 
 
 
 
-data class Trainer(val name: String, val biography: String, val imageUrl: String)
+
+
+
+
+data class Trainer(val name: String, val biography: String, val imageUrl: String, val price: String)
 
 @OptIn(ExperimentalCoilApi::class)
 @Composable
@@ -67,7 +79,7 @@ fun ScrollableCardList(trainers: List<Trainer>) {
                     .fillMaxWidth()
                     .padding(bottom = 16.dp)
                     .clickable {
-                               selectedTrainer = trainer
+                        selectedTrainer = trainer
                     },
                 backgroundColor = ComposeColor.White,
                 elevation = 4.dp,
@@ -122,12 +134,24 @@ fun ScrollableCardList(trainers: List<Trainer>) {
                         .padding(16.dp)
                         .fillMaxWidth()
                 ) {
-                    Text(
-                        text = trainer.name,
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(bottom = 5.dp)
-                    )
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = trainer.name,
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = ComposeColor.Black,
+                            modifier = Modifier.padding(bottom = 5.dp)
+                        )
+                        Text(
+                            text = "£${trainer.price}",
+                            fontSize = 28.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(bottom = 5.dp)
+                        )
+                    }
                     Row(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
@@ -152,29 +176,37 @@ fun ScrollableCardList(trainers: List<Trainer>) {
                     }
                     Spacer(modifier = Modifier.height(10.dp))
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 10.dp, bottom = 10.dp),
-                        horizontalArrangement = Arrangement.End
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
                     ) {
-                        Button(
+                        TextButton(
                             onClick = { selectedTrainer = null },
-                            modifier = Modifier.padding(end = 16.dp)
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp),
+                            colors = ButtonDefaults.buttonColors(backgroundColor = ComposeColor.White),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Text(
                                 text = "Close",
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = ComposeColor.Black
                             )
                         }
+                        Spacer(modifier = Modifier.width(10.dp))
                         Button(
-                            onClick = { /* Confirm action */ },
-                            modifier = Modifier.padding(end = 16.dp)
+                            onClick = {},
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(50.dp),
+                            shape = RoundedCornerShape(10.dp)
                         ) {
                             Text(
                                 text = "Confirm",
                                 fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
+                                fontWeight = FontWeight.Bold,
+                                color = ComposeColor.White
                             )
                         }
                     }
@@ -182,7 +214,6 @@ fun ScrollableCardList(trainers: List<Trainer>) {
             }
         }
     }
-
 
 
 
@@ -207,10 +238,11 @@ fun TrainerList() {
         val newTrainers = snapshot.documents.map { document ->
             val name = document.getString("name") ?: ""
             val biography = document.getString("biography") ?: ""
+            val price = document.getString("price") ?: ""
             val pfpRef = storage.reference.child("pfp/${document.id}")
             Log.d(TAG, pfpRef.toString())
             val imageUrl = pfpRef.downloadUrl.await().toString()
-            Trainer(name, biography, imageUrl)
+            Trainer(name, biography, imageUrl, price)
         }
         trainers = newTrainers
     }
