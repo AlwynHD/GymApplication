@@ -17,7 +17,11 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.google.firebase.firestore.FirebaseFirestore
@@ -105,46 +109,84 @@ fun ScrollableCardList(trainers: List<Trainer>) {
     }
 
     selectedTrainer?.let { trainer ->
-        AlertDialog(
-            onDismissRequest = { selectedTrainer = null },
-            title = { Text(text = trainer.name) },
-            text = {
-                Row(
-                    modifier = Modifier.padding(bottom = 16.dp)
+        Dialog(onDismissRequest = { selectedTrainer = null }) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(color = ComposeColor.White, shape = RoundedCornerShape(20.dp))
+                    .border(width = 1.dp, color = ComposeColor.LightGray, shape = RoundedCornerShape(20.dp))
+                    .clip(RoundedCornerShape(20.dp))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(16.dp)
+                        .fillMaxWidth()
                 ) {
-                    Image(
-                        painter = rememberImagePainter(
-                            data = trainer.imageUrl,
-                            builder = {
-                                crossfade(true)
-                            }
-                        ),
-                        contentDescription = "Trainer image",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(64.dp)
-                            .clip(RoundedCornerShape(8.dp))
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
                     Text(
-                        text = trainer.biography,
-                        style = MaterialTheme.typography.caption
+                        text = trainer.name,
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(bottom = 5.dp)
                     )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = rememberImagePainter(
+                                data = trainer.imageUrl,
+                                builder = {
+                                    crossfade(true)
+                                }
+                            ),
+                            contentDescription = "Trainer image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(80.dp)
+                                .clip(RoundedCornerShape(10.dp))
+                        )
+                        Spacer(modifier = Modifier.width(20.dp))
+                        Text(
+                            text = trainer.biography,
+                            style = MaterialTheme.typography.body1.copy(fontSize = 16.sp)
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(10.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 10.dp, bottom = 10.dp),
+                        horizontalArrangement = Arrangement.End
+                    ) {
+                        Button(
+                            onClick = { selectedTrainer = null },
+                            modifier = Modifier.padding(end = 16.dp)
+                        ) {
+                            Text(
+                                text = "Close",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                        Button(
+                            onClick = { /* Confirm action */ },
+                            modifier = Modifier.padding(end = 16.dp)
+                        ) {
+                            Text(
+                                text = "Confirm",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { selectedTrainer = null }) {
-                    Text(text = "Close")
-                }
-            },
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth()
-                .background(color = ComposeColor.White, shape = RoundedCornerShape(16.dp))
-                .border(width = 1.dp, color = ComposeColor.LightGray, shape = RoundedCornerShape(16.dp))
-                .clip(RoundedCornerShape(16.dp))
-        )
+            }
+        }
     }
+
+
+
+
+
 
 
 
