@@ -42,15 +42,7 @@ fun TrainerMenu(navController: NavController) {
 
     ) {
 
-//        Text(
-//            modifier = Modifier.clickable {
-//                navController.navigate(route = Screen.LoginScreen.route)
-//            },
-//            text = "Detail",
-//            color = Color.Red,
-//            fontSize = MaterialTheme.typography.h3.fontSize,
-//            fontWeight = FontWeight.Bold
-//        )
+
         BottomMenu(
             items = listOf(
                 BottomMenuContent("Home", R.drawable.ic_home),

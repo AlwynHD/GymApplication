@@ -16,6 +16,9 @@ fun SetupNavGraph(
         composable(route = Screen.TrainerMenu.route) {
             TrainerMenu(navController = navController)
         }
+        composable(route = Screen.TraineeMenu.route) {
+            TraineeMenu(navController = navController)
+        }
         composable(route = Screen.ChooseTrainer.route) {
             ChooseTrainer(navController = navController)
         }

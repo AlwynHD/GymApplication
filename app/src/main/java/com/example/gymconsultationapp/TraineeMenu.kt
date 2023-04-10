@@ -17,11 +17,14 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
+import androidx.navigation.compose.rememberNavController
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
 import com.google.firebase.firestore.FirebaseFirestore
@@ -32,10 +35,20 @@ import androidx.compose.ui.graphics.Color as ComposeColor
 import kotlin.random.Random
 
 
+@Composable
+fun TraineeMenu(navController: NavController) {
+    FadingStrings(listOf("Welcome", "Ya Sack of Shite"))
 
+
+
+
+
+
+}
 
 @Composable
 fun ChooseTrainer(navController: NavController) {
+
     Column(
         modifier = Modifier.fillMaxSize()
     ) {
@@ -51,21 +64,37 @@ fun ChooseTrainer(navController: NavController) {
     }
 
     if (timeElapsed) {
-        TrainerList()}
+        val db = FirebaseFirestore.getInstance()
+        val storage = FirebaseStorage.getInstance()
+        var trainers by remember { mutableStateOf(emptyList<Trainer>()) }
+
+        LaunchedEffect(Unit) {
+            val snapshot = db.collection("Trainers").get().await()
+            val newTrainers = snapshot.documents.map { document ->
+                val name = document.getString("name") ?: ""
+                val biography = document.getString("biography") ?: ""
+                val price = document.getString("price") ?: ""
+                val pfpRef = storage.reference.child("pfp/${document.id}")
+                Log.d(TAG, pfpRef.toString())
+                val imageUrl = pfpRef.downloadUrl.await().toString()
+                Trainer(name, biography, imageUrl, price, document.id)
+            }
+            trainers = newTrainers
+        }
+
+        Surface(color = ComposeColor.White) {
+            ScrollableCardList(trainers, navController)
+        }
+    }
     }
 
 
 
-
-
-
-
-
-data class Trainer(val name: String, val biography: String, val imageUrl: String, val price: String)
+data class Trainer(val name: String, val biography: String, val imageUrl: String, val price: String, val trainerID: String)
 
 @OptIn(ExperimentalCoilApi::class)
 @Composable
-fun ScrollableCardList(trainers: List<Trainer>) {
+fun ScrollableCardList(trainers: List<Trainer>, navController: NavController) {
 
     var selectedTrainer by remember { mutableStateOf<Trainer?>(null) }
 
@@ -126,7 +155,11 @@ fun ScrollableCardList(trainers: List<Trainer>) {
                 modifier = Modifier
                     .fillMaxWidth()
                     .background(color = ComposeColor.White, shape = RoundedCornerShape(20.dp))
-                    .border(width = 1.dp, color = ComposeColor.LightGray, shape = RoundedCornerShape(20.dp))
+                    .border(
+                        width = 1.dp,
+                        color = ComposeColor.LightGray,
+                        shape = RoundedCornerShape(20.dp)
+                    )
                     .clip(RoundedCornerShape(20.dp))
             ) {
                 Column(
@@ -196,7 +229,15 @@ fun ScrollableCardList(trainers: List<Trainer>) {
                         }
                         Spacer(modifier = Modifier.width(10.dp))
                         Button(
-                            onClick = {},
+                            onClick = {
+
+                                dbWrite("Trainees","trainerFound", true)
+                                dbWrite("Trainees","trainerId", trainer.trainerID)
+                                navController.navigate(route = Screen.TraineeMenu.route)
+
+
+
+                            },
                             modifier = Modifier
                                 .weight(1f)
                                 .height(50.dp),
@@ -227,30 +268,7 @@ fun ScrollableCardList(trainers: List<Trainer>) {
 }
 
 
-@Composable
-fun TrainerList() {
-    val db = FirebaseFirestore.getInstance()
-    val storage = FirebaseStorage.getInstance()
-    var trainers by remember { mutableStateOf(emptyList<Trainer>()) }
 
-    LaunchedEffect(Unit) {
-        val snapshot = db.collection("Trainers").get().await()
-        val newTrainers = snapshot.documents.map { document ->
-            val name = document.getString("name") ?: ""
-            val biography = document.getString("biography") ?: ""
-            val price = document.getString("price") ?: ""
-            val pfpRef = storage.reference.child("pfp/${document.id}")
-            Log.d(TAG, pfpRef.toString())
-            val imageUrl = pfpRef.downloadUrl.await().toString()
-            Trainer(name, biography, imageUrl, price)
-        }
-        trainers = newTrainers
-    }
-
-    Surface(color = ComposeColor.White) {
-        ScrollableCardList(trainers)
-    }
-}
 
 
 
