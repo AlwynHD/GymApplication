@@ -242,7 +242,20 @@ fun ScrollableCardList(trainers: List<Trainer>, navController: NavController) {
 
                                 dbWrite("Trainees", "trainerFound", true)
                                 dbWrite("Trainees", "trainerId", trainer.trainerID)
+                                val db = Firebase.firestore
+                                val auth = FirebaseAuth.getInstance()
+
+                                val documentRef = db.collection("Trainers").document(trainer.trainerID)
+                                documentRef.update("clients", FieldValue.arrayUnion(auth.currentUser!!.uid))
+                                    .addOnSuccessListener {
+                                        Log.d(TAG, "Succesfully added client to database")
+                                    }
+                                    .addOnFailureListener {
+                                        Log.d(TAG, "Failed to add client to database")
+                                    }
+
                                 navController.navigate(route = Screen.TraineeMenu.route)
+
 
 
                             },
@@ -294,12 +307,9 @@ fun TraineeMenu(navController: NavController) {
                 var receiverId = remember { mutableStateOf("") }
 
                 LaunchedEffect(Unit) {
-                    val docref =
-                        db.collection("Trainees").document(auth.currentUser!!.uid).get().await()
+                    val docref = db.collection("Trainees").document(auth.currentUser!!.uid).get().await()
                     receiverId.value = docref.get("trainerId").toString()
                     Log.d(TAG, receiverId.value + "  Stupid")
-
-
                 }
 
                 Log.d(TAG, receiverId.value + "  Less Stupid")
@@ -307,7 +317,7 @@ fun TraineeMenu(navController: NavController) {
                 if (receiverId.value.isNotBlank()) {
                     Log.d(TAG, receiverId.value + "   Inside of if statement")
 
-                    ChatScreen(firestore, receiverId.value, senderId, "Trainers")
+                    ChatScreen(firestore, senderId, receiverId.value, "Trainees")
 
                 } else {
                     // handle the case when the receiverId value is blank
