@@ -174,12 +174,26 @@ fun LoginScreen(navController: NavController) {
                                     if (document != null) {
 
                                         val isCompleted = document.get("onCompleted")
+                                        val type = document.get("userType")
 
                                         if(isCompleted == false) {
                                             navController.navigate(route = Screen.FirstTimeLoginScreen.route)
                                         }
-                                        else{
+                                        else if(type == "Trainers"){
                                             navController.navigate(route = Screen.TrainerMenu.route)
+                                        }
+                                        else if(type == "Trainees") {
+                                            val docref2 = db.collection("Trainees").document(auth.currentUser!!.uid)
+                                            docref2.get()
+                                                .addOnSuccessListener { document ->
+                                                    val trainer = document.get("trainerFound")
+                                                    if(trainer == false){
+                                                        navController.navigate(route = Screen.ChooseTrainer.route)
+                                                    }
+                                                    else{
+                                                        navController.navigate(route = Screen.TraineeMenu.route)
+                                                    }
+                                                }
                                         }
                                         Log.d(TAG, "Has user logged in before: $isCompleted")
                                     } else {

@@ -36,21 +36,46 @@ val DeepBlue = Color(0xff120055)
 
 @Composable
 fun TrainerMenu(navController: NavController) {
-    Box(
-        modifier = Modifier.fillMaxSize(),
-        contentAlignment = Alignment.Center
-
-    ) {
 
 
-        BottomMenu(
+    Scaffold(
+        bottomBar = {
+                    BottomMenu(
             items = listOf(
                 BottomMenuContent("Home", R.drawable.ic_home),
                 BottomMenuContent("Clients", R.drawable.ic_clients),
                 BottomMenuContent("Profile", R.drawable.ic_profile),
-            ), modifier = Modifier.align(Alignment.BottomCenter)
-        )
+            ),
+            //modifier = Modifier.align(Alignment.BottomCenter),
+        ){ selectedItemIndex ->
+            // selectedItemIndex contains the index value of the selected item
+            // do something with the selected item index here
+        }
+        }
+    ) {
+        // This is where you can put your content composables
     }
+
+
+//    Box(
+//        modifier = Modifier.fillMaxSize(),
+//        contentAlignment = Alignment.Center
+//
+//    ) {
+//
+//        BottomMenu(
+//            items = listOf(
+//                BottomMenuContent("Home", R.drawable.ic_home),
+//                BottomMenuContent("Clients", R.drawable.ic_clients),
+//                BottomMenuContent("Profile", R.drawable.ic_profile),
+//            ),
+//            modifier = Modifier.align(Alignment.BottomCenter),
+//        ){ selectedItemIndex ->
+//            // selectedItemIndex contains the index value of the selected item
+//            // do something with the selected item index here
+//        }
+//
+//    }
 
 
 }
@@ -63,7 +88,10 @@ fun BottomMenu(
     activeHighlightColor: Color = ButtonBlue,
     activeTextColor: Color = Color.White,
     inactiveTextColor: Color = AquaBlue,
-    initialSelectedItemIndex: Int = 0
+    initialSelectedItemIndex: Int = 0,
+
+    onItemSelected: (Int) -> Unit // callback function to be called when an item is selected
+
 ) {
     var selectedItemIndex by remember {
         mutableStateOf(initialSelectedItemIndex)
@@ -85,6 +113,8 @@ fun BottomMenu(
                 inactiveTextColor = inactiveTextColor
             ) {
                 selectedItemIndex = index
+                onItemSelected(index) // call the callback function with the selected item index
+
             }
         }
     }
