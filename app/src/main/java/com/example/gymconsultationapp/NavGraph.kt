@@ -9,7 +9,7 @@ import androidx.navigation.compose.composable
 fun SetupNavGraph(
     navController: NavHostController
 ){
-    NavHost(navController = navController, startDestination = Screen.TraineeMenu.route) {
+    NavHost(navController = navController, startDestination = Screen.TrainerMenu.route) {
         composable(route = Screen.LoginScreen.route) {
             LoginScreen(navController =  navController)
         }
@@ -37,6 +37,7 @@ fun SetupNavGraph(
         composable(route = Screen.UploadImage.route) {
             UploadImage(navController = navController)
         }
+
     }
 
 }

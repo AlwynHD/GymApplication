@@ -33,13 +33,10 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.*
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
-
 import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.tasks.await
 import java.util.*
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import androidx.compose.ui.graphics.Color as ComposeColor
 
@@ -90,6 +87,7 @@ fun ChooseTrainer(navController: NavController) {
                 val pfpRef = storage.reference.child("pfp/${document.id}")
                 Log.d(TAG, pfpRef.toString())
                 val imageUrl = pfpRef.downloadUrl.await().toString()
+                Log.d(TAG, "HELLO" + imageUrl)
                 Trainer(name, biography, imageUrl, price, document.id)
             }
             trainers = newTrainers
@@ -290,15 +288,15 @@ fun TraineeMenu(navController: NavController) {
             .fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
     ) {
-        if (index.value == 1) {
+        Column(
+            modifier = Modifier
+                .background(androidx.compose.ui.graphics.Color(0xff2f1366))
+                .fillMaxSize()
+                .padding(bottom = 72.dp),
+            verticalArrangement = Arrangement.Bottom,
+        ) {
+            if (index.value == 1) {
 
-            Column(
-                modifier = Modifier
-                    .background(androidx.compose.ui.graphics.Color(0xff2f1366))
-                    .fillMaxSize()
-                    .padding(bottom = 72.dp),
-                verticalArrangement = Arrangement.Bottom,
-            ) {
 
                 // Add your components here
                 val firestore = Firebase.firestore
@@ -318,6 +316,8 @@ fun TraineeMenu(navController: NavController) {
                     Log.d(TAG, receiverId.value + "   Inside of if statement")
 
                     ChatScreen(firestore, senderId, receiverId.value, "Trainees")
+                    //ChatScreen(firestore, "u2O5x1TqmvavDl9F0wPS3oc2zYh2", "B1PV7roOLVdzqeUPJvqCF9TvLXK2", "Trainees")
+
 
                 } else {
                     // handle the case when the receiverId value is blank
@@ -488,7 +488,7 @@ fun ChatScreen(
             }
         }
 
-        Column(modifier = Modifier.padding(bottom = 72.dp)) {
+        Column(modifier = Modifier.padding(bottom = 72.dp, top = 72.dp)) {
 
 
 
@@ -577,8 +577,6 @@ fun ChatScreen(
                         keyboard?.hide()
                     }
             }
-
-
 
 
         }

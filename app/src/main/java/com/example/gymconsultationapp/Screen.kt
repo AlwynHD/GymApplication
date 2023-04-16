@@ -11,6 +11,5 @@ sealed class Screen(val route: String){
     object UploadImage : Screen("upload_image")
     object ChooseTrainer : Screen("choose_trainer")
 
-
 }
 
