@@ -1,6 +1,8 @@
 package com.example.gymconsultationapp
 
 import android.R
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.media.Image
@@ -65,10 +67,12 @@ import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 
 
+
 class MainActivity : ComponentActivity() {
 
     lateinit var navController: NavHostController
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
@@ -105,6 +109,14 @@ class MainActivity : ComponentActivity() {
                         insets
                     }
 
+                    // Create a notification channel
+                    val channel = NotificationChannel(
+                        "1",
+                        "Default Notifications",
+                        NotificationManager.IMPORTANCE_DEFAULT
+                    )
+                    val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+                    notificationManager.createNotificationChannel(channel)
 
 
                 }

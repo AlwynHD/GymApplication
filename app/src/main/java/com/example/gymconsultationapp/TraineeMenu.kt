@@ -1,7 +1,13 @@
 package com.example.gymconsultationapp
 
+
+import android.app.NotificationChannel
+import android.app.NotificationManager
 import android.content.ContentValues.TAG
+import android.content.Context
+import android.os.Build
 import android.util.Log
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -9,7 +15,11 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
@@ -18,22 +28,32 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import androidx.core.app.NotificationCompat
+import androidx.core.content.ContextCompat.getSystemService
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.*
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
+import com.google.firebase.storage.ktx.storage
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import java.util.*
@@ -243,8 +263,12 @@ fun ScrollableCardList(trainers: List<Trainer>, navController: NavController) {
                                 val db = Firebase.firestore
                                 val auth = FirebaseAuth.getInstance()
 
-                                val documentRef = db.collection("Trainers").document(trainer.trainerID)
-                                documentRef.update("clients", FieldValue.arrayUnion(auth.currentUser!!.uid))
+                                val documentRef =
+                                    db.collection("Trainers").document(trainer.trainerID)
+                                documentRef.update(
+                                    "clients",
+                                    FieldValue.arrayUnion(auth.currentUser!!.uid)
+                                )
                                     .addOnSuccessListener {
                                         Log.d(TAG, "Succesfully added client to database")
                                     }
@@ -253,7 +277,6 @@ fun ScrollableCardList(trainers: List<Trainer>, navController: NavController) {
                                     }
 
                                 navController.navigate(route = Screen.TraineeMenu.route)
-
 
 
                             },
@@ -296,8 +319,6 @@ fun TraineeMenu(navController: NavController) {
             verticalArrangement = Arrangement.Bottom,
         ) {
             if (index.value == 1) {
-
-
                 // Add your components here
                 val firestore = Firebase.firestore
                 val db = Firebase.firestore
@@ -305,24 +326,19 @@ fun TraineeMenu(navController: NavController) {
                 var receiverId = remember { mutableStateOf("") }
 
                 LaunchedEffect(Unit) {
-                    val docref = db.collection("Trainees").document(auth.currentUser!!.uid).get().await()
+                    val docref =
+                        db.collection("Trainees").document(auth.currentUser!!.uid).get().await()
                     receiverId.value = docref.get("trainerId").toString()
-                    Log.d(TAG, receiverId.value + "  Stupid")
                 }
 
-                Log.d(TAG, receiverId.value + "  Less Stupid")
 
                 if (receiverId.value.isNotBlank()) {
-                    Log.d(TAG, receiverId.value + "   Inside of if statement")
-
                     ChatScreen(firestore, senderId, receiverId.value, "Trainees")
                     //ChatScreen(firestore, "u2O5x1TqmvavDl9F0wPS3oc2zYh2", "B1PV7roOLVdzqeUPJvqCF9TvLXK2", "Trainees")
-
-
-                } else {
-                    // handle the case when the receiverId value is blank
                 }
 
+            } else if (index.value == 2) {
+                SettingsScreen(navController)
             }
         }
 
@@ -414,9 +430,6 @@ fun ChatScreen(
     }
 
 
-
-
-
     LaunchedEffect(Unit) {
         val collection = firestore.collection("chats").document(chatId).collection("messages")
         collection.orderBy("timestamp")
@@ -443,7 +456,7 @@ fun ChatScreen(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.BottomCenter,
     ) {
-        Column(modifier = Modifier.align(Alignment.TopCenter))  {
+        Column(modifier = Modifier.align(Alignment.TopCenter)) {
             TopAppBar(
                 backgroundColor = MaterialTheme.colors.primary,
                 contentPadding = PaddingValues(0.dp),
@@ -489,7 +502,6 @@ fun ChatScreen(
         }
 
         Column(modifier = Modifier.padding(bottom = 72.dp, top = 72.dp)) {
-
 
 
             val lazyListState = rememberLazyListState()
@@ -569,7 +581,7 @@ fun ChatScreen(
                 // scroll to the bottom when a new message is added
                 lazyListState.scrollToItem(messages.size)
             }
-// Detect scroll events and hide the keyboard
+            // Detect scroll events and hide the keyboard
             LaunchedEffect(lazyListState) {
                 snapshotFlow { lazyListState.firstVisibleItemIndex }
                     .distinctUntilChanged()
@@ -623,8 +635,413 @@ fun ChatScreen(
         }
     }
 
-
 }
+
+
+@RequiresApi(Build.VERSION_CODES.O)
+@Composable
+fun SettingsScreen(navController: NavController) {
+    var showDeletionDialog by remember { mutableStateOf(false) }
+    var changeTrainer by remember { mutableStateOf(false) }
+    var changePassword by remember { mutableStateOf(false) }
+    var toggleNotifications by remember { mutableStateOf(false) }
+
+    val notificationManager = LocalContext.current.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val channel = NotificationChannel(
+        "1",
+        "Default Notifications",
+        NotificationManager.IMPORTANCE_DEFAULT
+    )
+    notificationManager.createNotificationChannel(channel)
+
+    val notification = NotificationCompat.Builder(LocalContext.current, "1")
+        .setSmallIcon(R.drawable.ic_profile)
+        .setContentTitle("Notifications enabled")
+        .setContentText("You will now receive notifications")
+        .setPriority(NotificationCompat.PRIORITY_DEFAULT)
+        .build()
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colors.background)
+    ) {
+        TopAppBar(
+            title = { Text(text = "Settings") },
+            backgroundColor = MaterialTheme.colors.surface,
+            contentColor = MaterialTheme.colors.onSurface,
+            navigationIcon = {
+                IconButton(onClick = { /* TODO */ }) {
+                    Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                }
+            }
+        )
+
+
+        // Notification Preferences Section
+        Text(
+            text = "Notification Preferences",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
+        )
+
+        SwitchSetting(
+            label = "Push Notifications",
+            checked = toggleNotifications,
+            onCheckedChange = {isChecked ->
+                toggleNotifications = isChecked
+                if(toggleNotifications == true){
+                    notificationManager.notify(1, notification)
+                }
+            },
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
+        )
+
+
+
+        Divider(
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
+            thickness = 1.dp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+
+        // Account Settings Section
+        Text(
+            text = "Account Settings",
+            fontSize = 18.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
+        )
+        Text(
+            text = "Edit Profile",
+            fontSize = 16.sp,
+            color = MaterialTheme.colors.secondary,
+            modifier = Modifier
+                .clickable(onClick = { navController.navigate(route = Screen.FirstTrainee.route) })
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
+        )
+        Text(
+            text = "Change Password",
+            fontSize = 16.sp,
+            color = MaterialTheme.colors.secondary,
+            modifier = Modifier
+                .clickable(onClick = { changePassword = true })
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
+        )
+        Text(
+            text = "Delete Account",
+            fontSize = 16.sp,
+            color = MaterialTheme.colors.secondary,
+            modifier = Modifier
+                .clickable(onClick = { showDeletionDialog = true })
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
+        )
+        Text(
+            text = "Change Trainers",
+            fontSize = 16.sp,
+            color = MaterialTheme.colors.secondary,
+            modifier = Modifier
+                .clickable(onClick = {
+                    changeTrainer = true
+
+
+                    navController.navigate(route = Screen.ChooseTrainer.route)
+
+
+                })
+                .padding(horizontal = 16.dp, vertical = 8.dp)
+                .fillMaxWidth()
+        )
+
+        Divider(
+            color = MaterialTheme.colors.onSurface.copy(alpha = 0.2f),
+            thickness = 1.dp,
+            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)
+        )
+
+
+        //delete account Dialog
+        if (showDeletionDialog) {
+            DeleteAccountDialog(
+                onConfirm = {
+                    // Delete the account
+                    val auth = Firebase.auth
+                    val user = Firebase.auth.currentUser
+                    val db = Firebase.firestore
+                    val docRef = db.collection("Trainees").document(auth.currentUser!!.uid)
+                    val docRef2 = db.collection("UserInfo").document(auth.currentUser!!.uid)
+
+                    docRef.delete()
+                        .addOnSuccessListener {
+                            // Document deleted successfully
+                        }
+                        .addOnFailureListener { e ->
+                            // An error occurred while deleting the document
+                        }
+
+                    docRef2.delete()
+                        .addOnSuccessListener {
+                            // Document deleted successfully
+                        }
+                        .addOnFailureListener { e ->
+                            // An error occurred while deleting the document
+                        }
+
+                    val storageRef =
+                        Firebase.storage.reference.child("pfp/${auth.currentUser!!.uid}")
+
+                    storageRef.delete()
+                        .addOnSuccessListener {
+                            // Image deleted successfully
+                        }
+                        .addOnFailureListener { e ->
+                            // An error occurred while deleting the image
+                        }
+
+
+
+                    user?.delete()
+                        ?.addOnSuccessListener {
+                            navController.navigate(route = Screen.LoginScreen.route)
+
+                            // User deleted successfully
+                        }
+                        ?.addOnFailureListener { e ->
+                            // An error occurred while deleting the user
+                        }
+                    showDeletionDialog = false
+                },
+                onCancel = {
+                    // Do nothing
+                    showDeletionDialog = false
+                }
+            )
+        }
+
+        //change trainer boolean
+        if (changeTrainer) {
+            val auth = Firebase.auth
+            val db = Firebase.firestore
+            LaunchedEffect(Unit) {
+                val docref = db.collection("Trainees").document(auth.currentUser!!.uid)
+                Log.d(TAG, "Trainee ID:" + auth.currentUser!!.uid)
+                docref.get().addOnSuccessListener { document ->
+                    if (document != null && document.exists()) {
+                        val trainer = document["trainerId"].toString()
+                        Log.d(TAG, "Trainer ID:" + trainer)
+
+                        val docref2 = db.collection("Trainers").document(trainer)
+                        docref2.get().addOnSuccessListener { document2 ->
+                            val trainees = document2["clients"] as List<String>?
+
+                            if (trainees != null) {
+                                for (client in trainees) {
+                                    if (client == auth.currentUser!!.uid) {
+                                        val newtrainees = trainees.filter { it != client }
+                                        db.collection("Trainers").document(trainer)
+                                            .update(mapOf("clients" to newtrainees)) // remove the element at the current index
+
+                                        changeTrainer = false
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                }.await()
+
+
+            }
+        }
+
+        if (changePassword) {
+            ChangePasswordDialog(
+                onDismiss = { changePassword = false },
+                onUpdatePassword = {
+                    // Update the state with the new password
+                    navController.navigate(route = Screen.LoginScreen.route)
+                }
+            )
+        }
+    }
+}
+
+
+@Composable
+fun SwitchSetting(
+    label: String,
+    checked: Boolean,
+    onCheckedChange: (Boolean) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        modifier = modifier
+    ) {
+        Text(
+            text = label,
+            fontSize = 16.sp,
+            modifier = Modifier.weight(1f)
+        )
+        Switch(
+            checked = checked,
+            onCheckedChange = onCheckedChange,
+            colors = SwitchDefaults.colors(
+                checkedThumbColor = MaterialTheme.colors.secondary,
+                checkedTrackColor = MaterialTheme.colors.secondary.copy(alpha = 0.5f)
+            )
+        )
+    }
+}
+
+@Composable
+fun DeleteAccountDialog(onConfirm: () -> Unit, onCancel: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onCancel,
+        title = {
+            Text(
+                text = "Confirm Deletion Of Account",
+                style = MaterialTheme.typography.h6,
+                fontWeight = FontWeight.Bold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        text = {
+            Text(
+                text = "Are you sure you want to delete your account? This action cannot be undone.",
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
+            )
+        },
+        confirmButton = {
+            Button(
+                onClick = onConfirm,
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = MaterialTheme.colors.error,
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.padding(4.dp),
+                content = {
+                    Text(
+                        text = "Confirm",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            )
+        },
+        dismissButton = {
+            TextButton(
+                onClick = onCancel,
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier.padding(4.dp),
+                content = {
+                    Text(
+                        text = "Cancel",
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            )
+        },
+        modifier = Modifier
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .wrapContentWidth()
+    )
+}
+
+
+@Composable
+fun ChangePasswordDialog(
+    onDismiss: () -> Unit,
+    onUpdatePassword: (String) -> Unit
+) {
+    var currentPassword by remember { mutableStateOf("") }
+    var newPassword by remember { mutableStateOf("") }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Change Password") },
+        text = {
+            Column {
+                TextField(
+                    value = currentPassword,
+                    onValueChange = { currentPassword = it },
+                    label = { Text("Current Password") },
+                    //visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Password
+                    )
+                )
+
+                TextField(
+                    value = newPassword,
+                    onValueChange = { newPassword = it },
+                    label = { Text("New Password") },
+                    //visualTransformation = PasswordVisualTransformation(),
+                    keyboardOptions = KeyboardOptions.Default.copy(
+                        keyboardType = KeyboardType.Password
+                    )
+                )
+            }
+        },
+        confirmButton = {
+            Button(
+                onClick = {
+                    val user = FirebaseAuth.getInstance().currentUser
+                    val auth = Firebase.auth
+                    val credential =
+                        EmailAuthProvider.getCredential(user?.email ?: "", currentPassword)
+                    user?.reauthenticate(credential)?.addOnSuccessListener {
+                        user.updatePassword(newPassword).addOnSuccessListener {
+                            onUpdatePassword(newPassword)
+
+                            val db = Firebase.firestore
+                            db.collection("UserInfo").document(auth.currentUser!!.uid)
+                                .update(mapOf("name" to newPassword))
+
+
+                            onDismiss()
+
+                        }.addOnFailureListener { exception ->
+                            // Handle password update failure
+                            Log.d(TAG, "Success")
+
+                        }
+                    }?.addOnFailureListener { exception ->
+                        // Handle reauthentication failure
+                        Log.d(TAG, "FAILED")
+                    }
+                }
+            ) {
+                Text("Change Password")
+            }
+        },
+        dismissButton = {
+            Button(
+                onClick = { onDismiss() }
+            ) {
+                Text("Cancel")
+            }
+        }
+    )
+}
+
+
+
+
+
+
 
 
 

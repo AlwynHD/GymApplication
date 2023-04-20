@@ -53,7 +53,6 @@ val DeepBlue = Color(0xff120055)
 fun TrainerMenu(navController: NavController) {
     var index = remember { mutableStateOf(0) }
 
-
     Box(
         modifier = Modifier
             .fillMaxSize(),
@@ -72,8 +71,7 @@ fun TrainerMenu(navController: NavController) {
             val auth = FirebaseAuth.getInstance()
             val storage = FirebaseStorage.getInstance()
             val traineesState = remember { mutableStateOf(emptyList<Trainee>()) }
-            var allTraineesProcessed =
-                false // flag to indicate whether all trainees have been processed
+
             LaunchedEffect(Unit) {
                 // first, retrieve the array of trainee IDs from Firestore
                 val docRef = db.collection("Trainers").document(auth.currentUser!!.uid)
