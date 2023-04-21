@@ -724,7 +724,7 @@ fun SettingsScreen(navController: NavController) {
             fontSize = 16.sp,
             color = MaterialTheme.colors.secondary,
             modifier = Modifier
-                .clickable(onClick = { navController.navigate(route = Screen.FirstTrainee.route) })
+                .clickable(onClick = { navController.navigate(route = Screen.FirstTrainer.route) })
                 .padding(horizontal = 16.dp, vertical = 8.dp)
                 .fillMaxWidth()
         )
