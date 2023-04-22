@@ -1,6 +1,7 @@
 package com.example.gymconsultationapp
 
-import android.app.Dialog
+import android.annotation.SuppressLint
+import androidx.lifecycle.lifecycleScope
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ContentValues.TAG
@@ -45,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.app.NotificationCompat
 import coil.compose.rememberImagePainter
+import com.google.android.gms.common.api.Api
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
 import com.google.firebase.firestore.DocumentReference
@@ -56,10 +58,24 @@ import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
 import com.google.firebase.storage.ktx.storage
+import com.google.gson.Gson
+import com.google.gson.GsonBuilder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import okhttp3.Call
+import okhttp3.Callback
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.Response
+import org.json.JSONObject
+import retrofit2.Retrofit
+import retrofit2.converter.gson.GsonConverterFactory
+import retrofit2.http.GET
+import java.io.IOException
 
 
 val ButtonBlue = Color(0xff505cf3)
@@ -134,6 +150,10 @@ fun TrainerMenu(navController: NavController) {
 
             } else if (index.value == 2) {
                 TrainerSettings(navController)
+            } else if (index.value == 0) {
+
+                ExercisesScreen()
+
             }
 
         }
@@ -485,6 +505,8 @@ fun RemoveTraineeDialog(
                     ) {
                         Text(text = trainee.name)
                     }
+
+
                 }
             }
         },
@@ -509,9 +531,8 @@ fun RemoveTraineeDialog(
             }
         },
 
-    )
+        )
 }
-
 
 
 @Composable
@@ -663,6 +684,47 @@ data class Trainee(
     var imageUrl: StorageReference,
     // add any other properties you need here
 )
+
+
+@Composable
+fun ExercisesScreen() {
+    val client = OkHttpClient()
+    Thread {
+        val request = Request.Builder()
+            .url("https://musclewiki.p.rapidapi.com/exercises")
+            .get()
+            .addHeader("x-rapidapi-host", "musclewiki.p.rapidapi.com")
+            .addHeader("x-rapidapi-key", "b852ea0306msh9e87c5cce98cd20p1dc1e0jsn0b26a2935459")
+            .build()
+
+        val response = client.newCall(request).execute()
+
+        // Use the response body as per your application's needs
+        val responseBody = response.body?.string()
+        data class Exercise(
+            val id: Int,
+            val exercise_name: String,
+            val youtubeURL: String,
+            val Category: String,
+            val Force: String,
+            val videoURL: List<String>
+        )
+
+        val gson = GsonBuilder().create()
+        val exercises = gson.fromJson(responseBody, Array<Exercise>::class.java)
+        for(exercise in exercises){
+            Log.d(TAG,  exercise.id.toString() +  " " + exercise.exercise_name + " " + exercise.videoURL)
+        }
+
+
+    }.start()
+
+
+}
+
+
+
+
 
 
 
