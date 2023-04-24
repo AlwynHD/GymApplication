@@ -3,6 +3,7 @@ package com.example.gymconsultationapp
 
 import android.content.ContentValues
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.LinearOutSlowInEasing
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.*
@@ -29,7 +31,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.*
+import com.google.gson.GsonBuilder
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.withContext
+import okhttp3.OkHttpClient
+import okhttp3.Request
 
 //Input text field
 @Composable
@@ -223,6 +230,47 @@ fun BottomMenuItem(
 data class BottomMenuContent(
     val title: String,
     @DrawableRes val iconId: Int
+)
+
+
+@Composable
+fun ExerciseData(): Array<Exercise> {
+    val client = OkHttpClient()
+    var exercises = remember { mutableStateOf(emptyArray<Exercise>()) }
+    LaunchedEffect(Unit) {
+        withContext(Dispatchers.IO) {
+            val request = Request.Builder()
+                .url("https://musclewiki.p.rapidapi.com/exercises")
+                .get()
+                .addHeader("x-rapidapi-host", "musclewiki.p.rapidapi.com")
+                .addHeader("x-rapidapi-key", "b852ea0306msh9e87c5cce98cd20p1dc1e0jsn0b26a2935459")
+                .build()
+
+            val response = client.newCall(request).execute()
+
+            // Use the response body as per your application's needs
+            val responseBody = response.body?.string()
+
+
+            val gson = GsonBuilder().create()
+            exercises.value = gson.fromJson(responseBody, Array<Exercise>::class.java)
+
+
+
+        }
+    }
+
+    return exercises.value
+}
+
+data class Exercise(
+    val id: Int,
+    val exercise_name: String,
+    val youtubeURL: String,
+    val Category: String,
+    val Difficulty: String,
+    val Force: String,
+    val videoURL: List<String>
 )
 
 

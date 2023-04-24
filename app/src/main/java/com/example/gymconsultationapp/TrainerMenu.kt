@@ -88,7 +88,6 @@ fun TrainerMenu(navController: NavController) {
 
     Box(
 
-
         modifier = Modifier
             .fillMaxSize(),
         contentAlignment = Alignment.BottomCenter
@@ -152,7 +151,8 @@ fun TrainerMenu(navController: NavController) {
                 TrainerSettings(navController)
             } else if (index.value == 0) {
 
-                ExercisesScreen()
+
+
 
             }
 
@@ -684,44 +684,6 @@ data class Trainee(
     var imageUrl: StorageReference,
     // add any other properties you need here
 )
-
-
-@Composable
-fun ExercisesScreen() {
-    val client = OkHttpClient()
-    Thread {
-        val request = Request.Builder()
-            .url("https://musclewiki.p.rapidapi.com/exercises")
-            .get()
-            .addHeader("x-rapidapi-host", "musclewiki.p.rapidapi.com")
-            .addHeader("x-rapidapi-key", "b852ea0306msh9e87c5cce98cd20p1dc1e0jsn0b26a2935459")
-            .build()
-
-        val response = client.newCall(request).execute()
-
-        // Use the response body as per your application's needs
-        val responseBody = response.body?.string()
-        data class Exercise(
-            val id: Int,
-            val exercise_name: String,
-            val youtubeURL: String,
-            val Category: String,
-            val Force: String,
-            val videoURL: List<String>
-        )
-
-        val gson = GsonBuilder().create()
-        val exercises = gson.fromJson(responseBody, Array<Exercise>::class.java)
-        for(exercise in exercises){
-            Log.d(TAG,  exercise.id.toString() +  " " + exercise.exercise_name + " " + exercise.videoURL)
-        }
-
-
-    }.start()
-
-
-}
-
 
 
 

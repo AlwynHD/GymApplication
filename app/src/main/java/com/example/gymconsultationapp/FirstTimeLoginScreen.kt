@@ -29,6 +29,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Alignment.Companion.BottomCenter
+import androidx.compose.ui.Alignment.Companion.CenterHorizontally
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
@@ -205,18 +206,19 @@ fun FirstTrainer(navController: NavController) {
 
     val interactionSource = remember { MutableInteractionSource() }
 
+    val context = LocalContext.current
 
 
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .padding(70.dp),
+            .padding(30.dp),
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
 
     ) {
 
-        ProfessionalLabel(label = labelValue)
+        ProfessionalLabel(label = labelValue, modifier = Modifier.width(300.dp))
         Spacer(modifier = Modifier.height(100.dp))
         ProfessionalTextField(onInputChanged = { input = it }, text = input, modifier = Modifier)
 
@@ -230,25 +232,55 @@ fun FirstTrainer(navController: NavController) {
         ) {
             Button(
                 onClick = {
-                    dbWrite("Trainers", pathValue, input)
-                    when (labelValue) {
-                        "What is Your Name" -> labelValue = "What is Your Age"
-                        "What is Your Age" -> labelValue = "What is Your Price"
-                        "What is Your Price" -> {
-                            labelValue = "Tell us a little about Yourself"
+                    if (!input.isNullOrEmpty()) {
+                        when (labelValue) {
+                            "What is Your Name" -> {
+                                dbWrite("Trainers", pathValue, input)
+                                labelValue = "What is Your Age"
+                                pathValue = "age"
+                            }
 
-                        }
-                        "Tell us a little about Yourself" -> {
-                            dbWrite("UserInfo", "onCompleted", true)
-                            navController.navigate(route = Screen.UploadImage.route)
-                        }
-                    }
+                            "What is Your Age" -> {
+                                if (input.toLongOrNull() != null) {
+                                    dbWrite("Trainers", pathValue, input)
+                                    labelValue = "Choose Your Price per Month"
+                                    pathValue = "price"
 
-                    when (pathValue) {
-                        "name" -> pathValue = "age"
-                        "age" -> pathValue = "price"
-                        "price" -> pathValue = "biography"
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Input Must be an Integer",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+
+                            "Choose Your Price per Month" -> {
+                                if (input.toLongOrNull() != null) {
+                                    dbWrite("Trainers", pathValue, input)
+                                    labelValue = "Tell us a little about Yourself"
+                                    pathValue = "biography"
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Input Must be an Integer",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+                                }
+                            }
+
+                            "Tell us a little about Yourself" -> {
+                                dbWrite("Trainers", pathValue, input)
+                                dbWrite("UserInfo", "onCompleted", true)
+                                navController.navigate(route = Screen.UploadImage.route)
+                            }
+                        }
+
+
+                    }else {
+                        Toast.makeText(context, "Input is Empty", Toast.LENGTH_SHORT).show()
                     }
+                    input = ""
 
 
                 },
@@ -278,8 +310,8 @@ fun FirstTrainee(navController: NavController) {
     var btnText by remember { mutableStateOf("Next") }
 
     val interactionSource = remember { MutableInteractionSource() }
-    val pressed by interactionSource.collectIsPressedAsState()
 
+    val context = LocalContext.current
 
 
     Column(
@@ -305,28 +337,56 @@ fun FirstTrainee(navController: NavController) {
         ) {
             Button(
                 onClick = {
-                    dbWrite("Trainees", pathValue, input)
-                    when (labelValue) {
-                        "What is Your Name" -> labelValue = "What is Your Age"
-                        "What is Your Age" -> labelValue = "What are Your Goals"
-                        "What are Your Goals" -> labelValue = "What is Your Height"
-                        "What is Your Height" -> {
-                            labelValue = "What is Your Weight"
+                    if (!input.isNullOrEmpty()) {
+
+
+                        when (labelValue) {
+                            "What is Your Name" -> {
+                                dbWrite("Trainees", pathValue, input)
+                                labelValue = "What is Your Age"
+                                pathValue = "age"
                             }
-                        "What is Your Weight" -> {
-                            dbWrite("UserInfo", "onCompleted", true)
-                            navController.navigate(route = Screen.UploadImage.route)
+
+                            "What is Your Age" -> {
+                                if (input.toLongOrNull() != null) {
+                                    dbWrite("Trainees", pathValue, input)
+                                    labelValue = "What are Your Goals"
+                                    pathValue = "goals"
+                                } else {
+                                    Toast.makeText(
+                                        context,
+                                        "Input Must be an Integer",
+                                        Toast.LENGTH_SHORT
+                                    ).show()
+
+                                }
+                            }
+
+                            "What are Your Goals" -> {
+                                dbWrite("Trainees", pathValue, input)
+                                labelValue = "What is Your Height"
+                                pathValue = "height"
+                            }
+
+                            "What is Your Height" -> {
+                                dbWrite("Trainees", pathValue, input)
+                                labelValue = "What is Your Weight (Kg)"
+                                pathValue = "weight"
+                            }
+
+                            "What is Your Weight (Kg)" -> {
+                                dbWrite("Trainees", pathValue, input)
+                                dbWrite("UserInfo", "onCompleted", true)
+                                navController.navigate(route = Screen.UploadImage.route)
+                            }
                         }
-                    }
 
-                    when (pathValue) {
-                        "name" -> pathValue = "age"
-                        "age" -> pathValue = "goals"
-                        "goals" -> pathValue = "height"
-                        "height" -> pathValue = "weight"
+
+                        input = ""
+                    } else {
+                        Toast.makeText(context, "Input is Empty", Toast.LENGTH_SHORT).show()
 
                     }
-
 
 
                 },
@@ -575,7 +635,6 @@ fun UploadImage(navController: NavController) {
                 }
 
 
-
                 val docref = db.collection("UserInfo").document(auth.currentUser!!.uid)
                 docref.get()
                     .addOnSuccessListener { document ->
@@ -583,10 +642,9 @@ fun UploadImage(navController: NavController) {
 
                             val userType = document.get("userType")
 
-                            if(userType == "Trainers") {
+                            if (userType == "Trainers") {
                                 navController.navigate(route = Screen.TrainerMenu.route)
-                            }
-                            else{
+                            } else {
                                 navController.navigate(route = Screen.ChooseTrainer.route)
                             }
                             Log.d(ContentValues.TAG, "Has user logged in before: $userType")
@@ -598,7 +656,6 @@ fun UploadImage(navController: NavController) {
                     .addOnFailureListener { exception ->
                         Log.d(ContentValues.TAG, "get failed with ", exception)
                     }
-
 
 
             })

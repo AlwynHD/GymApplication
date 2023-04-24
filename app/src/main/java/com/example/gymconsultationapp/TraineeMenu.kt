@@ -318,7 +318,7 @@ fun TraineeMenu(navController: NavController) {
                 .padding(bottom = 72.dp),
             verticalArrangement = Arrangement.Bottom,
         ) {
-            if (index.value == 1) {
+            if (index.value == 2) {
                 // Add your components here
                 val firestore = Firebase.firestore
                 val db = Firebase.firestore
@@ -337,8 +337,17 @@ fun TraineeMenu(navController: NavController) {
                     //ChatScreen(firestore, "u2O5x1TqmvavDl9F0wPS3oc2zYh2", "B1PV7roOLVdzqeUPJvqCF9TvLXK2", "Trainees")
                 }
 
-            } else if (index.value == 2) {
+            } else if (index.value == 3) {
                 SettingsScreen(navController)
+            } else if (index.value == 1) {
+                val exercises = ExerciseData()
+                for (exercise in exercises) {
+                    if (exercise.Difficulty == "Beginner") {
+                        Log.d(TAG, exercise.id.toString() + ", " + exercise.exercise_name)
+
+                    }
+
+                }
             }
         }
 
@@ -355,6 +364,7 @@ fun TraineeMenu(navController: NavController) {
             BottomMenu(
                 items = listOf(
                     BottomMenuContent("Home", R.drawable.ic_home),
+                    BottomMenuContent("Workouts", R.drawable.ic_dumbell_foreground),
                     BottomMenuContent("Chat", R.drawable.ic_chat),
                     BottomMenuContent("Profile", R.drawable.ic_profile),
                 ),
@@ -646,7 +656,8 @@ fun SettingsScreen(navController: NavController) {
     var changePassword by remember { mutableStateOf(false) }
     var toggleNotifications by remember { mutableStateOf(false) }
 
-    val notificationManager = LocalContext.current.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+    val notificationManager =
+        LocalContext.current.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
     val channel = NotificationChannel(
         "1",
         "Default Notifications",
@@ -691,9 +702,9 @@ fun SettingsScreen(navController: NavController) {
         SwitchSetting(
             label = "Push Notifications",
             checked = toggleNotifications,
-            onCheckedChange = {isChecked ->
+            onCheckedChange = { isChecked ->
                 toggleNotifications = isChecked
-                if(toggleNotifications == true){
+                if (toggleNotifications == true) {
                     notificationManager.notify(1, notification)
                 }
             },
