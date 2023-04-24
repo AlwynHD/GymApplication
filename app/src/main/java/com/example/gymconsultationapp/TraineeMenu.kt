@@ -339,15 +339,27 @@ fun TraineeMenu(navController: NavController) {
 
             } else if (index.value == 3) {
                 SettingsScreen(navController)
+                
+                
             } else if (index.value == 1) {
                 val exercises = ExerciseData()
+//                data class Exercise(
+//                    val id: Int,
+//                    val exercise_name: String,
+//                    val youtubeURL: String,
+//                    val Category: String,
+//                    val Difficulty: String,
+//                    val Force: String,
+//                    val videoURL: List<String>
+//                )
+
                 for (exercise in exercises) {
                     if (exercise.Difficulty == "Beginner") {
                         Log.d(TAG, exercise.id.toString() + ", " + exercise.exercise_name)
 
                     }
-
                 }
+                
             }
         }
 
@@ -373,6 +385,12 @@ fun TraineeMenu(navController: NavController) {
         }
 
     }
+    
+}
+
+@Composable
+fun searchWorkoutsScreen() {
+
 
 
 }
