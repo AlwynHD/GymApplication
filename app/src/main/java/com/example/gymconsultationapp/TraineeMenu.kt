@@ -1,25 +1,52 @@
 package com.example.gymconsultationapp
 
-
+import androidx.activity.viewModels
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.items
+import androidx.compose.material.MaterialTheme
+import androidx.compose.material.Surface
+import androidx.compose.material.Text
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.unit.dp
+import kotlin.random.Random
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ContentValues.TAG
 import android.content.Context
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.net.Uri
 import android.os.Build
+import android.util.AndroidException
 import android.util.Log
+import android.widget.Toast
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Notifications
+import androidx.compose.material.icons.outlined.Home
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
@@ -28,6 +55,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onSizeChanged
@@ -35,17 +63,28 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.colorResource
+import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.compose.ui.window.Dialog
 import androidx.core.app.NotificationCompat
 import androidx.core.content.ContextCompat.getSystemService
 import coil.annotation.ExperimentalCoilApi
 import coil.compose.rememberImagePainter
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
@@ -54,10 +93,18 @@ import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.ktx.storage
+import com.google.maps.android.compose.GoogleMap
+import com.google.maps.android.compose.MapProperties
+import com.google.maps.android.compose.rememberCameraPositionState
+import com.maxkeppeker.sheets.core.models.base.rememberSheetState
+import com.maxkeppeler.sheets.calendar.CalendarDialog
+import com.maxkeppeler.sheets.calendar.models.CalendarConfig
+import com.maxkeppeler.sheets.calendar.models.CalendarSelection
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.tasks.await
 import java.util.*
 import kotlinx.coroutines.flow.distinctUntilChanged
+import java.time.LocalDate
 import androidx.compose.ui.graphics.Color as ComposeColor
 
 
@@ -334,32 +381,20 @@ fun TraineeMenu(navController: NavController) {
 
                 if (receiverId.value.isNotBlank()) {
                     ChatScreen(firestore, senderId, receiverId.value, "Trainees")
-                    //ChatScreen(firestore, "u2O5x1TqmvavDl9F0wPS3oc2zYh2", "B1PV7roOLVdzqeUPJvqCF9TvLXK2", "Trainees")
                 }
 
             } else if (index.value == 3) {
                 SettingsScreen(navController)
-                
-                
+
+
             } else if (index.value == 1) {
-                val exercises = ExerciseData()
-//                data class Exercise(
-//                    val id: Int,
-//                    val exercise_name: String,
-//                    val youtubeURL: String,
-//                    val Category: String,
-//                    val Difficulty: String,
-//                    val Force: String,
-//                    val videoURL: List<String>
-//                )
 
-                for (exercise in exercises) {
-                    if (exercise.Difficulty == "Beginner") {
-                        Log.d(TAG, exercise.id.toString() + ", " + exercise.exercise_name)
+                searchWorkoutsScreen()
 
-                    }
-                }
-                
+            } else if (index.value == 0) {
+
+                HomeScreen()
+
             }
         }
 
@@ -385,16 +420,766 @@ fun TraineeMenu(navController: NavController) {
         }
 
     }
-    
+
 }
 
+@OptIn(ExperimentalCoilApi::class)
+@Composable
+fun HomeScreen() {
+
+    var showGoogleMaps = remember { mutableStateOf(false) }
+
+    //Check amount of steps
+    val context = LocalContext.current
+    var stepCount by remember { mutableStateOf(0) }
+    val sensorManager = remember(context) {
+        context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+    }
+    val sensorEventListener = remember {
+        object : SensorEventListener {
+            override fun onSensorChanged(event: SensorEvent) {
+                if (event.sensor.type == Sensor.TYPE_STEP_COUNTER) {
+                    stepCount = event.values[0].toInt()
+                }
+            }
+
+            override fun onAccuracyChanged(sensor: Sensor, accuracy: Int) {}
+        }
+    }
+    DisposableEffect(sensorManager, sensorEventListener) {
+        val sensor = sensorManager.getDefaultSensor(Sensor.TYPE_STEP_COUNTER)
+        sensorManager.registerListener(
+            sensorEventListener,
+            sensor,
+            SensorManager.SENSOR_DELAY_NORMAL
+        )
+
+        onDispose {
+            sensorManager.unregisterListener(sensorEventListener)
+        }
+    }
+
+
+    val db = Firebase.firestore
+    val auth = Firebase.auth
+    val storage = FirebaseStorage.getInstance()
+    var name = remember { mutableStateOf("") }
+    var imageUrl = remember { mutableStateOf("") }
+    LaunchedEffect(Unit) {
+        val docref = db.collection("Trainees").document(auth.currentUser!!.uid)
+        docref.get()
+            .addOnSuccessListener { document ->
+                if (document != null) {
+                    name.value = document.get("name").toString()
+                }
+            }
+        val pfpRef = storage.reference.child("pfp/${auth.currentUser!!.uid}")
+        imageUrl.value = pfpRef.downloadUrl.await().toString()
+    }
+
+
+    val calenderState = rememberSheetState()
+    val initialDate = LocalDate.now()
+    var selectedDate = remember { mutableStateOf(initialDate) }
+    var selectedWorkout = remember { mutableStateOf(emptyList<Int>()) }
+
+
+    val collection = db.collection("Workouts").document(auth.currentUser!!.uid)
+    collection.get().addOnSuccessListener { document ->
+        val stringsArray = document.get(selectedDate.value.toString()) as? List<Int>
+        selectedWorkout.value = stringsArray
+            ?: emptyList() // set the selectedStrings value to the retrieved array or an empty list
+    }
+
+    CalendarDialog(
+        state = calenderState, selection = CalendarSelection.Date { date ->
+
+            selectedDate.value = date
+
+            val collection = db.collection("Workouts").document(auth.currentUser!!.uid)
+            collection.get().addOnSuccessListener { document ->
+                val stringsArray = document.get(selectedDate.value.toString()) as? List<Int>
+
+                selectedWorkout.value = stringsArray
+                    ?: emptyList() // set the selectedStrings value to the retrieved array or an empty list
+            }
+        },
+        config = CalendarConfig(
+            monthSelection = true,
+            yearSelection = true
+        )
+    )
+    Log.d(TAG, "Third" + selectedWorkout.value)
+
+    val exercises = ExerciseData()
+    var selectedExercises = mutableListOf<Exercise>()
+
+    for (id in selectedWorkout.value) {
+        Log.d(TAG, id.toString())
+        val exercise = exercises.find { it.id == id }
+        exercise?.let { selectedExercises.add(it) }
+
+    }
+    Log.d(TAG, selectedExercises.toString())
+
+
+    Scaffold(topBar = {
+        TopAppBar(
+            modifier = Modifier
+                .padding(horizontal = 0.dp)
+                .height(72.dp),
+            elevation = 0.dp,
+            backgroundColor = MaterialTheme.colors.primary,
+
+            ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(horizontal = 23.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+
+                Image(
+                    painter = rememberImagePainter(
+                        data = imageUrl.value,
+                        builder = {
+                            crossfade(true)
+                        }
+                    ),
+                    contentDescription = "Profile Picture",
+                    modifier = Modifier
+                        .size(56.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+
+
+                Text(buildAnnotatedString {
+                    append("Hello, ")
+                    withStyle(
+                        style = SpanStyle(
+                            color = Color.White,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                    ) {
+                        append(name.value)
+                    }
+                }, modifier = Modifier.padding(start = 10.dp))
+
+                Spacer(modifier = Modifier.weight(1f))
+
+            }
+        }
+    }) {
+
+        //First
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(horizontal = 12.dp)
+        ) {
+
+            Spacer(modifier = Modifier.size(10.dp))
+
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(0.dp)
+            ) {
+                Button(
+                    onClick = { showGoogleMaps.value = true },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(5.dp)
+                        .clip(RoundedCornerShape(10)),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.primary),
+                    content = {
+                        Text(
+                            text = "Location",
+                            style = MaterialTheme.typography.button,
+                            color = MaterialTheme.colors.onPrimary
+                        )
+                    }
+                )
+
+                Button(
+                    onClick = { /* TODO */ },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(5.dp)
+                        .clip(RoundedCornerShape(10)),
+                    colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.secondary),
+                    content = {
+                        Text(
+                            text = "Diet",
+                            style = MaterialTheme.typography.button,
+                            color = MaterialTheme.colors.onPrimary
+                        )
+                    }
+                )
+            }
+
+
+            //Second
+            Spacer(modifier = Modifier.size(5.dp))
+
+            Box(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10))
+                    .background(MaterialTheme.colors.primary)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .padding(horizontal = 20.dp, vertical = 20.dp)
+                ) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "My\nWorkout", color = Color.Black,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 30.sp
+                        )
+
+                        Button(
+                            shape = RoundedCornerShape(20.dp),
+                            contentPadding = PaddingValues(6.dp),
+                            onClick = { calenderState.show() },
+                            colors = ButtonDefaults.textButtonColors(
+                                backgroundColor = colorResource(id = R.color.purple_200)
+                            )
+                        ) {
+                            Text(text = "Choose Date", color = Color.White, fontSize = 24.sp)
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.size(10.dp))
+
+                    Box(
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(30.dp))
+                        //.background(Color.White)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+
+                            LazyColumn(
+                                modifier = Modifier
+                                    .height(250.dp)
+                                    .padding(10.dp),
+                            ) {
+                                items(selectedExercises) { exercise ->
+                                    ExerciseBox(Exercise = exercise, modifier = Modifier.padding(2.dp))
+
+                                }
+
+                            }
+
+                        }
+
+                    }
+
+                    Spacer(modifier = Modifier.size(5.dp))
+
+                }
+            }
+
+            //Third
+            Spacer(modifier = Modifier.size(20.dp))
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 8.dp)
+            )
+            {
+
+                //Step Counter
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10))
+                        .background(Color.LightGray)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+
+
+                        Column {
+                            Text(
+                                text = "Steps",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp
+                            )
+                            Box(
+                                modifier = Modifier.padding(5.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(100.dp),
+                                    color = Color.Black,
+                                    progress = stepCount.toFloat(),
+                                    strokeWidth = 10.dp,
+                                )
+
+                                Text(
+                                    text = ((stepCount / 1000) * 100).toString() + "%",
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 25.sp
+                                )
+                            }
+                            Text(
+                                text = stepCount.toString() + "/1000",
+                                color = Color.Gray,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+
+                //Calorie Counter
+                Box(
+                    modifier = Modifier
+                        .padding(horizontal = 4.dp)
+                        .weight(1f)
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(10))
+                        .background(Color.LightGray)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(3.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+
+
+                        Column {
+                            Text(
+                                text = "Calories",
+                                color = Color.Black,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 20.sp
+                            )
+                            Box(
+                                modifier = Modifier.padding(5.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(100.dp),
+                                    color = Color.Black,
+                                    progress = 0.8f,
+                                    strokeWidth = 10.dp,
+                                )
+
+                                Text(
+                                    text = "80%",
+                                    color = Color.Black,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 25.sp
+                                )
+                            }
+                            Text(
+                                text = "3200/4000",
+                                color = Color.Gray,
+                                fontSize = 16.sp
+                            )
+                        }
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.size(10.dp))
+
+        }
+    }
+
+    if (showGoogleMaps.value) {
+
+//        MapScreen(
+//            state = viewModel.state.value,
+//            setupClusterManager = viewModel::setupClusterManager,
+//            calculateZoneViewCenter = viewModel::calculateZoneLatLngBounds
+//        )
+
+    }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
 @Composable
 fun searchWorkoutsScreen() {
+    val context = LocalContext.current //used for toast
+
+    var expandedCategories by remember { mutableStateOf(false) }
+    var categories by remember {
+        mutableStateOf(
+            listOf(
+                "Barbell",
+                "Dumbbells",
+                "Kettlebells",
+                "Stretches",
+                "Cables",
+                "Band",
+                "Plate",
+                "TRX",
+                "Bodyweight",
+                "Yoga",
+                "Machine"
+            )
+        )
+    }
+    var selectedCategory by remember { mutableStateOf("") }
 
 
+    var difficutlies by remember {
+        mutableStateOf(
+            listOf(
+                "Beginner",
+                "Intermediate",
+                "Advanced"
+            )
+        )
+    }
+    var selectedDifficulty by remember { mutableStateOf("") }
+    var expandedDifficulties by remember { mutableStateOf(false) }
+
+    var muscles by remember {
+        mutableStateOf(
+            listOf(
+                "Biceps",
+                "Forearms",
+                "Shoulders",
+                "Triceps",
+                "Quads",
+                "Glutes",
+                "Lats",
+                "Mid back",
+                "Lower back",
+                "Hamstrings",
+                "Chest",
+                "Abdominals",
+                "Obliques",
+                "Traps",
+                "Calves"
+            )
+        )
+    }
+    var selectedMuscles by remember { mutableStateOf("") }
+    var expandedMuscles by remember { mutableStateOf(false) }
+
+    var searchText by remember { mutableStateOf("") }
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+    Column() {
+        TextField(
+            value = searchText,
+            onValueChange = { searchText = it },
+            label = { Text("Search") },
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+            keyboardActions = KeyboardActions(
+                onDone = { keyboardController?.hide() }),
+            modifier = Modifier.fillMaxWidth()
+        )
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+        ) {
+
+
+            //for categories
+            Row(
+                modifier = Modifier
+                    //.fillMaxWidth()
+                    .weight(1f)
+                    .clickable { expandedCategories = true }
+                    .padding(bottom = 0.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = selectedCategory.takeIf { it.isNotEmpty() } ?: "Category",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = "Expand",
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.medium),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            DropdownMenu(
+                expanded = expandedCategories,
+                onDismissRequest = { expandedCategories = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                categories.forEach { category ->
+                    DropdownMenuItem(
+                        onClick = {
+                            selectedCategory = category
+                            expandedCategories = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = category,
+                            style = MaterialTheme.typography.body1,
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+                        )
+                    }
+                }
+            }
+
+            //for muscles
+            Row(
+                modifier = Modifier
+                    //.fillMaxWidth()
+                    .weight(1f)
+                    .clickable { expandedMuscles = true }
+                    .padding(bottom = 0.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = selectedMuscles.removePrefix("[").removeSuffix("]")
+                        .takeIf { it.isNotEmpty() } ?: "Muscles",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = "Expand",
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.medium),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            DropdownMenu(
+                expanded = expandedMuscles,
+                onDismissRequest = { expandedMuscles = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                muscles.forEach { category ->
+                    DropdownMenuItem(
+                        onClick = {
+                            selectedMuscles = "[" + category + "]"
+                            expandedMuscles = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = category,
+                            style = MaterialTheme.typography.body1,
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+                        )
+                    }
+                }
+            }
+
+            //For difficutlies
+            Row(
+                modifier = Modifier
+                    //.fillMaxWidth()
+                    .weight(1f)
+                    .clickable {
+                        if (selectedCategory.isNotBlank() || selectedMuscles.isNotBlank()) {
+                            expandedDifficulties = true
+                        } else {
+                            Toast
+                                .makeText(
+                                    context,
+                                    "Please Select Another Choice",
+                                    Toast.LENGTH_SHORT
+                                )
+                                .show()
+                        }
+                    }
+                    .padding(bottom = 0.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = selectedDifficulty.takeIf { it.isNotEmpty() } ?: "Difficulty",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = "Expand",
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.medium),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            DropdownMenu(
+                expanded = expandedDifficulties,
+                onDismissRequest = { expandedDifficulties = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                difficutlies.forEach { category ->
+                    DropdownMenuItem(
+                        onClick = {
+                            selectedDifficulty = category
+                            expandedDifficulties = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = category,
+                            style = MaterialTheme.typography.body1,
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+
+        val exercises = ExerciseData()
+        var filteredExercises = exercises.toList()
+        if (selectedCategory.isNotBlank() || selectedDifficulty.isNotBlank() || selectedMuscles.isNotBlank() || searchText.isNotBlank()) {
+            filteredExercises = exercises.filter { exercise ->
+                (selectedCategory.isBlank() || exercise.Category in selectedCategory) &&
+                        (selectedMuscles.isBlank() || exercise.target["Primary"].toString() in selectedMuscles) &&
+                        (selectedDifficulty.isBlank() || exercise.Difficulty in selectedDifficulty) &&
+                        (searchText.isEmpty() || exercise.exercise_name.contains(
+                            searchText,
+                            ignoreCase = true
+                        ))
+            }
+        } else {
+            filteredExercises = exercises.toList()
+        }
+
+
+        Column(modifier = Modifier) {
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(filteredExercises) { item ->
+
+                    ExerciseBox(Exercise = item, modifier = Modifier)
+                    Log.d(TAG, item.target["Primary"].toString())
+                    Log.d(TAG, selectedMuscles)
+
+                }
+            }
+        }
+    }
 
 }
 
+
+@Composable
+fun ExerciseBox(Exercise: Exercise, modifier: Modifier) {
+    var isclicked = remember { mutableStateOf(false) }
+
+    val context = LocalContext.current
+    val exoplayer = ExoPlayer.Builder(context).build()
+    val mediaItem = MediaItem.fromUri((Uri.parse(Exercise.videoURL[0])))
+    exoplayer.setMediaItem(mediaItem)
+
+    val playerView = StyledPlayerView(context)
+    playerView.player = exoplayer
+
+    Box(
+        modifier = modifier
+            .clickable {
+                isclicked.value = true
+            }
+            .wrapContentHeight()
+            .background(color = colorResource(id = R.color.purple_200), shape = RoundedCornerShape(10.dp))
+            .shadow(4.dp, RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(8.dp))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = Exercise.exercise_name,
+                style = MaterialTheme.typography.h6,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = Exercise.Difficulty,
+                style = MaterialTheme.typography.body1,
+                fontWeight = FontWeight.Normal
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+        }
+    }
+
+
+    if (isclicked.value) {
+
+        AlertDialog(
+            onDismissRequest = { isclicked.value = false },
+            title = { Text(text = Exercise.exercise_name) },
+            text = {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(150.dp) // set the height of the ExoPlayer view
+                ) {
+                    DisposableEffect(AndroidView(factory = { playerView })) {
+                        exoplayer.prepare()
+                        exoplayer.playWhenReady = true
+                        onDispose {
+                            exoplayer.release()
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = { isclicked.value = false },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color.White,
+                        contentColor = Color.Black
+                    )
+                ) {
+                    Text(text = "OK")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { isclicked.value = false },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color.White,
+                        contentColor = Color.Black
+                    )
+                ) {
+                    Text(text = "Cancel")
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            backgroundColor = Color.White,
+            contentColor = Color.Black,
+        )
+    }
+
+}
 
 data class Message(
     val senderId: String = "",

@@ -1,10 +1,12 @@
 package com.example.gymconsultationapp
 
+import android.Manifest.permission.ACCESS_FINE_LOCATION
 import android.R
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.ContentValues.TAG
 import android.content.Context
+import android.content.pm.PackageManager
 import android.media.Image
 import android.net.Uri
 import android.os.Build
@@ -18,6 +20,8 @@ import android.widget.FrameLayout
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.*
@@ -47,6 +51,7 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.content.ContextCompat
 import androidx.core.view.ViewCompat
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
@@ -63,12 +68,39 @@ import com.google.android.exoplayer2.MediaItem
 import com.google.android.exoplayer2.Player
 import com.google.android.exoplayer2.ui.AspectRatioFrameLayout.RESIZE_MODE_ZOOM
 import com.google.android.exoplayer2.ui.StyledPlayerView
+import com.google.android.gms.location.FusedLocationProviderClient
 import com.google.firebase.FirebaseApp
 import com.google.firebase.auth.FirebaseAuth
 
 
-
 class MainActivity : ComponentActivity() {
+
+    private val requestPermissionLauncher =
+        registerForActivityResult(
+            ActivityResultContracts.RequestPermission()
+        ) { isGranted: Boolean ->
+            if (isGranted) {
+                viewModel.getDeviceLocation(fusedLocationProviderClient)
+            }
+        }
+
+    private fun askPermissions() = when {
+        ContextCompat.checkSelfPermission(
+            this,
+            ACCESS_FINE_LOCATION
+        ) == PackageManager.PERMISSION_GRANTED -> {
+            viewModel.getDeviceLocation(fusedLocationProviderClient)
+        }
+        else -> {
+            requestPermissionLauncher.launch(ACCESS_FINE_LOCATION)
+        }
+    }
+
+    private lateinit var fusedLocationProviderClient: FusedLocationProviderClient
+    private val viewModel: MapViewModel by viewModels()
+
+
+
 
     lateinit var navController: NavHostController
 
@@ -118,7 +150,11 @@ class MainActivity : ComponentActivity() {
                     val notificationManager = getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
                     notificationManager.createNotificationChannel(channel)
 
-
+//                    MapScreen(
+//                        state = viewModel.state.value,
+//                        setupClusterManager = viewModel::setupClusterManager,
+//                        calculateZoneViewCenter = viewModel::calculateZoneLatLngBounds
+//                    )
                 }
             }
         }

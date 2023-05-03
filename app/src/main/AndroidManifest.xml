@@ -3,6 +3,9 @@
     xmlns:tools="http://schemas.android.com/tools">
 
 
+    <!--For Google Maps API-->
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
 
     <!--Internet permission and network access permission-->
     <uses-permission android:name="android.permission.INTERNET"/>
@@ -21,6 +24,11 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.GymConsultationApp"
         tools:targetApi="31">
+
+        <meta-data
+            android:name="com.google.android.geo.API_KEY"
+            android:value="${GOOGLE_MAPS_API_KEY}"/>
+
         <activity
             android:name=".MainActivity"
             android:exported="true"

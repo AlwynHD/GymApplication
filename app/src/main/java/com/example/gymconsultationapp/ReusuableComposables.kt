@@ -270,7 +270,11 @@ data class Exercise(
     val Category: String,
     val Difficulty: String,
     val Force: String,
-    val videoURL: List<String>
+    val videoURL: List<String>,
+    val target: Map<String, List<String>> = mapOf(
+        "Primary" to emptyList(),
+        "Secondary" to emptyList()
+    )
 )
 
 

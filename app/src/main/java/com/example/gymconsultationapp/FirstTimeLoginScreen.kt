@@ -149,7 +149,6 @@ fun FirstTimeLoginScreen(navController: NavController) {
                     dbWrite("UserInfo", "userType", choice)
 
 
-
                     db.collection(choice).document(auth.currentUser!!.uid)
                         .set(dataChoice)
                         .addOnSuccessListener { Log.d(ContentValues.TAG, "Data added") }
@@ -160,7 +159,6 @@ fun FirstTimeLoginScreen(navController: NavController) {
                                 e
                             )
                         }
-
                 },
                 modifier = Modifier
                     .fillMaxWidth()

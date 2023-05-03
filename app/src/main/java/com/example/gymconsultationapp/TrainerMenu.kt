@@ -7,10 +7,13 @@ import android.app.NotificationManager
 import android.content.ContentValues.TAG
 import android.content.Context
 import android.graphics.drawable.GradientDrawable
+import android.net.Uri
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.ui.res.painterResource
 import androidx.annotation.DrawableRes
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -25,27 +28,42 @@ import androidx.compose.ui.graphics.Color
 import androidx.navigation.NavController
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.staggeredgrid.LazyVerticalStaggeredGrid
+import androidx.compose.foundation.lazy.staggeredgrid.StaggeredGridCells
+import androidx.compose.foundation.lazy.staggeredgrid.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.ui.res.colorResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.app.NotificationCompat
 import coil.compose.rememberImagePainter
+import com.google.android.exoplayer2.ExoPlayer
+import com.google.android.exoplayer2.MediaItem
+import com.google.android.exoplayer2.ui.StyledPlayerView
 import com.google.android.gms.common.api.Api
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.ktx.auth
@@ -53,6 +71,7 @@ import com.google.firebase.firestore.DocumentReference
 import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FieldValue
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
 import com.google.firebase.firestore.ktx.firestore
 import com.google.firebase.ktx.Firebase
 import com.google.firebase.storage.FirebaseStorage
@@ -60,6 +79,10 @@ import com.google.firebase.storage.StorageReference
 import com.google.firebase.storage.ktx.storage
 import com.google.gson.Gson
 import com.google.gson.GsonBuilder
+import com.maxkeppeker.sheets.core.models.base.rememberSheetState
+import com.maxkeppeler.sheets.calendar.CalendarDialog
+import com.maxkeppeler.sheets.calendar.models.CalendarConfig
+import com.maxkeppeler.sheets.calendar.models.CalendarSelection
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -76,6 +99,7 @@ import retrofit2.Retrofit
 import retrofit2.converter.gson.GsonConverterFactory
 import retrofit2.http.GET
 import java.io.IOException
+import java.time.LocalDate
 
 
 val ButtonBlue = Color(0xff505cf3)
@@ -150,10 +174,7 @@ fun TrainerMenu(navController: NavController) {
             } else if (index.value == 2) {
                 TrainerSettings(navController)
             } else if (index.value == 0) {
-
-
-
-
+                ClientScreen(traineesState.value)
             }
 
         }
@@ -180,6 +201,574 @@ fun TrainerMenu(navController: NavController) {
 
     }
 
+}
+
+@Composable
+fun ClientScreen(trainees: List<Trainee>) {
+    var clientString = remember { mutableStateOf("") }
+    val mainScreen = remember { mutableStateOf(false) }
+    var traineeID = remember { mutableStateOf("") }
+
+
+    if (mainScreen.value == false) {
+        Log.d(TAG, trainees.toString())
+        LazyColumn(
+            modifier = Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp)
+        ) {
+            items(trainees) { client ->
+                LaunchedEffect(Unit) {
+                    clientString.value = client.imageUrl.downloadUrl.await().toString()
+                    //Log.d(TAG, clientString)
+                }
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(bottom = 16.dp)
+                        .clickable {
+                            mainScreen.value = true
+                            traineeID.value = client.id
+
+                        },
+                    backgroundColor = Color.White,
+                    elevation = 4.dp,
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color.LightGray)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier.padding(16.dp)
+                    ) {
+                        //Log.d(TAG, clientString)
+                        Image(
+                            painter = rememberImagePainter(
+                                data = clientString.value,
+                                builder = {
+                                    crossfade(true)
+                                }
+                            ),
+                            contentDescription = "Trainer image",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .size(64.dp)
+                                .clip(RoundedCornerShape(8.dp))
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column {
+                            Text(
+                                text = client.name,
+                                style = MaterialTheme.typography.h6
+                            )
+
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    if (mainScreen.value) {
+        //choose date
+        CreateWorkout(traineeID.value)
+
+    }
+}
+
+
+@OptIn(ExperimentalFoundationApi::class, ExperimentalComposeUiApi::class)
+@Composable
+fun CreateWorkout(traineeID: String) {
+    val context = LocalContext.current //used for toast
+
+    val calenderState = rememberSheetState()
+    val initialDate = LocalDate.now()
+    var selectedDate = remember { mutableStateOf(initialDate) }
+
+    CalendarDialog(
+        state = calenderState, selection = CalendarSelection.Date { date ->
+
+            selectedDate.value = date
+
+
+        },
+        config = CalendarConfig(
+            monthSelection = true,
+            yearSelection = true
+        )
+    )
+
+
+    var expandedCategories by remember { mutableStateOf(false) }
+    var categories by remember {
+        mutableStateOf(
+            listOf(
+                "Barbell",
+                "Dumbbells",
+                "Kettlebells",
+                "Stretches",
+                "Cables",
+                "Band",
+                "Plate",
+                "TRX",
+                "Bodyweight",
+                "Yoga",
+                "Machine"
+            )
+        )
+    }
+    var selectedCategory by remember { mutableStateOf("") }
+
+
+    var difficutlies by remember {
+        mutableStateOf(
+            listOf(
+                "Beginner",
+                "Intermediate",
+                "Advanced"
+            )
+        )
+    }
+
+    var selectedDifficulty by remember { mutableStateOf("") }
+    var expandedDifficulties by remember { mutableStateOf(false) }
+
+    var muscles by remember {
+        mutableStateOf(
+            listOf(
+                "Biceps",
+                "Forearms",
+                "Shoulders",
+                "Triceps",
+                "Quads",
+                "Glutes",
+                "Lats",
+                "Mid back",
+                "Lower back",
+                "Hamstrings",
+                "Chest",
+                "Abdominals",
+                "Obliques",
+                "Traps",
+                "Calves"
+            )
+        )
+    }
+    var selectedMuscles by remember { mutableStateOf("") }
+    var expandedMuscles by remember { mutableStateOf(false) }
+
+    var searchText by remember { mutableStateOf("") }
+
+    val keyboardController = LocalSoftwareKeyboardController.current
+
+
+    Column(modifier = Modifier.padding(10.dp)) {
+        Row() {
+            TextField(
+                value = searchText,
+                onValueChange = { searchText = it },
+                label = { Text("Search") },
+                textStyle = TextStyle(
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 16.sp
+                ),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(
+                    onDone = { keyboardController?.hide() }),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            )
+            Button(
+                onClick = {
+                    calenderState.show()
+                },
+                colors = ButtonDefaults.buttonColors(
+                    backgroundColor = colorResource(id = R.color.purple_200),
+                    contentColor = Color.White
+                ),
+                shape = RoundedCornerShape(8.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(0.5f)
+            ) {
+                Text(text = selectedDate.value.toString(), fontSize = 16.sp)
+            }
+
+        }
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(32.dp)
+        ) {
+
+            //for categories
+            Row(
+                modifier = Modifier
+                    //.fillMaxWidth()
+                    .weight(1f)
+                    .clickable { expandedCategories = true }
+                    .padding(bottom = 0.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = selectedCategory.takeIf { it.isNotEmpty() } ?: "Category",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = "Expand",
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.medium),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            DropdownMenu(
+                expanded = expandedCategories,
+                onDismissRequest = { expandedCategories = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                categories.forEach { category ->
+                    DropdownMenuItem(
+                        onClick = {
+                            selectedCategory = category
+                            expandedCategories = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = category,
+                            style = MaterialTheme.typography.body1,
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+                        )
+                    }
+                }
+            }
+
+            //for muscles
+            Row(
+                modifier = Modifier
+                    //.fillMaxWidth()
+                    .weight(1f)
+                    .clickable { expandedMuscles = true }
+                    .padding(bottom = 0.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = selectedMuscles.removePrefix("[").removeSuffix("]")
+                        .takeIf { it.isNotEmpty() } ?: "Muscles",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = "Expand",
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.medium),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            DropdownMenu(
+                expanded = expandedMuscles,
+                onDismissRequest = { expandedMuscles = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                muscles.forEach { category ->
+                    DropdownMenuItem(
+                        onClick = {
+                            selectedMuscles = "[" + category + "]"
+                            expandedMuscles = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = category,
+                            style = MaterialTheme.typography.body1,
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+                        )
+                    }
+                }
+            }
+
+            //For difficutlies
+            Row(
+                modifier = Modifier
+                    //.fillMaxWidth()
+                    .weight(1f)
+                    .clickable {
+                        if (selectedCategory.isNotBlank() || selectedMuscles.isNotBlank()) {
+                            expandedDifficulties = true
+                        } else {
+                            Toast
+                                .makeText(
+                                    context,
+                                    "Please Select Another Choice",
+                                    Toast.LENGTH_SHORT
+                                )
+                                .show()
+                        }
+                    }
+                    .padding(bottom = 0.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = selectedDifficulty.takeIf { it.isNotEmpty() } ?: "Difficulty",
+                    style = MaterialTheme.typography.h6,
+                    modifier = Modifier
+                )
+                Icon(
+                    imageVector = Icons.Filled.ArrowDropDown,
+                    contentDescription = "Expand",
+                    tint = MaterialTheme.colors.onSurface.copy(alpha = ContentAlpha.medium),
+                    modifier = Modifier.size(24.dp)
+                )
+            }
+            DropdownMenu(
+                expanded = expandedDifficulties,
+                onDismissRequest = { expandedDifficulties = false },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                difficutlies.forEach { category ->
+                    DropdownMenuItem(
+                        onClick = {
+                            selectedDifficulty = category
+                            expandedDifficulties = false
+                        },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = category,
+                            style = MaterialTheme.typography.body1,
+                            modifier = Modifier.padding(vertical = 8.dp, horizontal = 16.dp)
+                        )
+                    }
+                }
+            }
+        }
+
+
+        val exercises = ExerciseData()
+        var filteredExercises = exercises.toList()
+        if (selectedCategory.isNotBlank() || selectedDifficulty.isNotBlank() || selectedMuscles.isNotBlank() || searchText.isNotBlank()) {
+            filteredExercises = exercises.filter { exercise ->
+                (selectedCategory.isBlank() || exercise.Category in selectedCategory) &&
+                        (selectedMuscles.isBlank() || exercise.target["Primary"].toString() in selectedMuscles) &&
+                        (selectedDifficulty.isBlank() || exercise.Difficulty in selectedDifficulty) &&
+                        (searchText.isEmpty() || exercise.exercise_name.contains(
+                            searchText,
+                            ignoreCase = true
+                        ))
+            }
+        } else {
+            filteredExercises = exercises.toList()
+        }
+
+
+        var traineeWorkout = remember { mutableStateOf(emptyList<Int>()) }
+        var reset = remember { mutableStateOf(false) }
+
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(2f)
+                .clip(RoundedCornerShape(5))
+                .background(Color.LightGray)
+                .padding(10.dp)
+        ) {
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(2),
+                modifier = Modifier
+                    .fillMaxSize(),
+                contentPadding = PaddingValues(12.dp),
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
+                items(filteredExercises) { item ->
+                    Log.d(TAG,  "THIS IS IT vbeFIORE " + traineeWorkout.value.toString())
+                    var isChosen = WorkoutBox(Exercise = item, modifier = Modifier,reset.value)
+                    Log.d(TAG,filteredExercises.size.toString())
+                    Log.d(TAG,item.id.toString())
+
+                    if (isChosen && !traineeWorkout.value.contains(item.id)) {
+                        traineeWorkout.value += item.id
+                        Log.d(TAG, "THIS IS IT" + traineeWorkout.value.toString())
+                    }
+                }
+            }
+        }
+        Spacer(modifier = Modifier.size(10.dp))
+
+        var selectedExercises = mutableListOf<Exercise>()
+
+        for (id in traineeWorkout.value) {
+            val exercise = exercises.find { it.id == id }
+            exercise?.let { selectedExercises.add(it) }
+        }
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .weight(1f)
+                .padding(10.dp),
+        ) {
+
+            Row(
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10))
+                    .background(Color.LightGray),
+            ) {
+                LazyRow(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .weight(3f)
+                        .padding(10.dp)
+                ) {
+                    items(selectedExercises) { item ->
+
+                        Log.d(TAG, "exercieses value " + selectedExercises.size.toString())
+                        ExerciseBox(Exercise = item, modifier = Modifier)
+
+                    }
+                }
+                Button(
+                    modifier = Modifier.weight(1.3f),
+                    onClick = {
+                        val db = Firebase.firestore
+                        val workoutRef = db.collection("Workouts").document(traineeID)
+                        val data = mapOf(
+                            selectedDate.value.toString() to traineeWorkout.value
+
+                        )
+                        workoutRef.set(data, SetOptions.merge())
+                        traineeWorkout.value = emptyList()
+                        selectedExercises.clear()
+                        reset.value = true
+
+                        Log.d(TAG, traineeWorkout.value.toString())
+                        Log.d(TAG, selectedExercises.toString())
+
+
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = colorResource(id = R.color.purple_200),
+                        contentColor = Color.White
+                    ),
+                    shape = RoundedCornerShape(8.dp)
+                ) {
+                    Text(text = "Confirm\nWorkout", fontSize = 16.sp)
+                }
+            }
+        }
+    }
+
+
+}
+
+
+@Composable
+fun WorkoutBox(Exercise: Exercise, modifier: Modifier, reset: Boolean): Boolean {
+    var isclicked = remember { mutableStateOf(false) }
+
+
+    var chosenExercise = remember { mutableStateOf(false) }
+
+    if (reset) {
+        chosenExercise.value = false
+    }
+    val context = LocalContext.current
+    val exoplayer = ExoPlayer.Builder(context).build()
+    val mediaItem = MediaItem.fromUri((Uri.parse(Exercise.videoURL[0])))
+    exoplayer.setMediaItem(mediaItem)
+
+    val playerView = StyledPlayerView(context)
+    playerView.player = exoplayer
+
+
+    Box(
+        modifier = modifier
+            .clickable {
+                isclicked.value = true
+            }
+            .wrapContentHeight()
+            .background(
+                color = colorResource(id = R.color.purple_200),
+                shape = RoundedCornerShape(10.dp)
+            )
+            .shadow(4.dp, RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(8.dp))
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Text(
+                text = Exercise.exercise_name,
+                style = MaterialTheme.typography.h6,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = Exercise.Difficulty,
+                style = MaterialTheme.typography.body1,
+                fontWeight = FontWeight.Normal
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+
+        }
+    }
+
+
+    if (isclicked.value) {
+
+        AlertDialog(
+            onDismissRequest = { isclicked.value = false },
+            title = { Text(text = Exercise.exercise_name) },
+            text = {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .height(150.dp) // set the height of the ExoPlayer view
+                ) {
+                    DisposableEffect(AndroidView(factory = { playerView })) {
+                        exoplayer.prepare()
+                        exoplayer.playWhenReady = true
+                        onDispose {
+                            exoplayer.release()
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        chosenExercise.value = true
+                        isclicked.value = false
+                    },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color.White,
+                        contentColor = Color.Black
+                    )
+                ) {
+                    Text(text = "Add")
+                }
+            },
+            dismissButton = {
+                Button(
+                    onClick = { isclicked.value = false },
+                    colors = ButtonDefaults.buttonColors(
+                        backgroundColor = Color.White,
+                        contentColor = Color.Black
+                    )
+                ) {
+                    Text(text = "Cancel")
+                }
+            },
+            shape = RoundedCornerShape(16.dp),
+            backgroundColor = Color.White,
+            contentColor = Color.Black,
+        )
+    }
+    return chosenExercise.value
 }
 
 

@@ -116,16 +116,11 @@ sealed class InputType(
 @Composable
 fun LoginScreen(navController: NavController) {
 
-
     val context = LocalContext.current
-    val passwordFocusRequester = FocusRequester()
-    val focusManager = LocalFocusManager.current
-    val videoUri = "android.resource://gymconsultationapp/${R.raw.purple2}"
 
+    val videoUri = "android.resource://gymconsultationapp/${R.raw.purple2}"
     val exoPlayer = remember { context.buildExoPlayer(Uri.parse(videoUri)) }
 
-    val auth = Firebase.auth
-    val db = Firebase.firestore
 
     DisposableEffect(
         AndroidView(
@@ -137,6 +132,14 @@ fun LoginScreen(navController: NavController) {
             exoPlayer.release()
         }
     }
+
+    val passwordFocusRequester = FocusRequester()
+    val focusManager = LocalFocusManager.current
+
+    val auth = Firebase.auth
+    val db = Firebase.firestore
+
+
 
     Column(
         Modifier
